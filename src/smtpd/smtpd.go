@@ -48,7 +48,7 @@ func handleConnection() {
 			break;
 		}
 	}
-	fmt.Printf("221 Bye")	
+	fmt.Printf("221 Bye\r\n")	
 }
 
 func handleInputLine(line string) bool {
@@ -149,6 +149,7 @@ func processDATA(line string) bool {
 			break;
 		}
 		logger.Println(">" + line)
+		session.Data = append(session.Data, line)
 		if strings.HasPrefix(line, ".") && !strings.HasPrefix(line, "..") {
 			err := enqueue()
 			if err != nil {
