@@ -27,8 +27,8 @@ type Session struct {
 	From *address.Address
 	// Recipients is the array of recipients
 	Recipients []address.Address
-	// Data is the array of lines in the message itself
-	Data []string
+	// Data is the message body itself
+	Data string
 }
 
 var recipientLimit *int
@@ -273,7 +273,7 @@ func processDATA(session *Session, line string) (int, string, bool) {
 	if err != nil {
 		return 451, "message could not be accepted at this time, try again later", false
 	}
-	session.Data = append(session.Data, rcv)
+	session.Data = rcv
 
 	// Accept the start of message data
 	sendCodeLine(354, "Send message content; end with <CRLF>.<CRLF>")
@@ -283,66 +283,76 @@ func processDATA(session *Session, line string) (int, string, bool) {
 			break
 		}
 		logger.Println(">" + line)
-		session.Data = append(session.Data, line)
-		if strings.HasPrefix(line, ".") && !strings.HasPrefix(line, "..") {
-			// Check with spamc if needed
-			if spamc != nil {
-				msg, err := checkSpam(session)
+		if strings.HasPrefix(line, ".") {
+			if strings.HasPrefix(line, "..") {
+				// Remove escaped period character
+				line = line[1:len(line)]
+			} else {
+				// Check with spamc if needed
+				if spamc != nil {
+					msg, err := checkSpam(session)
+					if err != nil {
+						// Temporary failure if we can't check it
+						return 451, "message could not be accepted at this time, try again later", false
+					}
+					// We don't block here; let the user use their filters
+					session.Data = msg
+				}
+				err := enqueue(session)
 				if err != nil {
-					// Temporary failure if we can't check it
+					logger.Println("Unable to enqueue message!")
 					return 451, "message could not be accepted at this time, try again later", false
 				}
-				// We don't block here; let the user use their filters
-				session.Data = msg
+				return 250, "message accepted for delivery", false
 			}
-			err := enqueue(session)
-			if err != nil {
-				logger.Println("Unable to enqueue message!")
-				return 451, "message could not be accepted at this time, try again later", false
-			}
-			return 250, "message accepted for delivery", false
+			session.Data += line
 		}
 	}
 	// If we somehow get here without the message being completed, return a temporary failure
 	return 451, "message could not be accepted at this time, try again later", false
 }
 
-func checkSpam(session *Session) ([]string, error) {
-	result := make([]string, len(session.Data))
+// CheckSpam runs spamc to see if a message is spam, and returns either an error, or the modified message
+func checkSpam(session *Session) (string, error) {
+	result := ""
 	cmd := exec.Command(*spamc)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		log.Fatal(err)
 	}
-	stdout, err2 := cmd.StdoutPipe()
-	if err2 != nil {
-		log.Fatal(err2)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
 	}
 	if err := cmd.Start(); err != nil {
 		log.Fatal(err)
 	}
+
 	defer stdin.Close()
 	defer stdout.Close()
-	for _, line := range session.Data {
-		// stdin.Write(line)
-	}
 
+	spamwriter := bufio.NewWriter(stdin)
+	spamwriter = bufio.NewWriterSize(spamwriter, len(session.Data))
+	spamwriter.WriteString(session.Data)
+
+	// Create a reader at least as big as the original message with extra space for headers
 	spamreader := bufio.NewReader(stdout)
+	spamreader = bufio.NewReaderSize(spamreader, len(session.Data)+1024)
+
+	// Read the message back out
 	for finished := false; !finished; {
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			break
 		}
-		logger.Println(">" + line)
-		code, resp, finished := handleInputLine(session, line)
-		sendCodeLine(code, resp)
-		if finished {
-			break
-		}
+		result += line
 	}
-	for {
-		stdout.Read()
+	err = cmd.Wait()
+	if err != nil {
+		log.Fatal(err)
+		return "", err
 	}
+	return result, nil
 }
 
 // enqueue places the current message (as contained in the session) into the disk queue; ie accepting delivery
@@ -360,7 +370,7 @@ func processRSET(session *Session, line string) (int, string, bool) {
 	session.Sender = nil
 	session.From = nil
 	session.Recipients = make([]address.Address, 0)
-	session.Data = make([]string, 0)
+	session.Data = ""
 	return 250, "OK", false
 }
 
