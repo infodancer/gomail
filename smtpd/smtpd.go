@@ -1,4 +1,4 @@
-package smtpd
+package main
 
 import (
 	"bufio"
@@ -7,9 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"gomail/address"
+	"gomail/domain"
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,7 +22,20 @@ type Session struct {
 	Started time.Time
 	// Activity indicates the time of last activity
 	Activity time.Time
-
+	// Protocol contains the protocol, usually TCP
+	Protocol string
+	// LocalIP contains the local (listening) ip address
+	LocalIP string
+	// LocalPort contains the local (listening) port number
+	LocalPort int
+	// LocalHost contains the hostname of the server
+	LocalHost string
+	// RemoteIP contains the remote ip address
+	RemoteIP string
+	// RemotePort contains the remote port number
+	RemotePort int
+	// RemoteHost contains the hostname of the remote client
+	RemoteHost string
 	// Sender is the authenticated user sending the message; nil if not authenticated
 	Sender *address.Address
 	// From is the claimed sender of the message
@@ -45,7 +60,34 @@ func main() {
 	logger = log.New(os.Stderr, "", 0)
 	logger.Println("gomail smtpd started")
 	session := Session{}
+	// Default helo to localhost if not manually set
+	if helo == nil {
+		helo = &session.LocalHost
+		if helo == nil || len(*helo) == 0 {
+			helo = &session.LocalIP
+		}
+	}
 	handleConnection(&session)
+}
+
+func initializeSessionFromEnvironment(session *Session) {
+	session.Protocol = os.Getenv("PROTO")
+	session.LocalIP = os.Getenv("TCPLOCALIP")
+	lport, err := strconv.Atoi(os.Getenv("TCPLOCALPORT"))
+	if err != nil {
+		session.LocalPort = 0
+	}
+	session.LocalPort = lport
+	if err != nil {
+	}
+	session.LocalHost = os.Getenv("TCPLOCALHOST")
+	session.RemoteIP = os.Getenv("TCPREMOTEIP")
+	rport, err := strconv.Atoi(os.Getenv("TCPREMOTEPORT"))
+	if err != nil {
+		session.RemotePort = 0
+	}
+	session.RemotePort = rport
+	session.RemoteHost = os.Getenv("TCPREMOTEHOST")
 }
 
 // sendLine accepts a line without linefeeds and sends it with network linefeeds
@@ -214,14 +256,15 @@ func processRCPT(session *Session, line string) (int, string, bool) {
 	if len(*addr) == 0 {
 		return 503, "We don't accept mail to that address", false
 	}
-	// Check for relay and allow only if sender has authenticated
-	if !isLocalAddress(*addr) && session.Sender == nil {
-		return 553, "We don't relay mail to remote addresses", false
-	}
 
 	recipient, err := address.CreateAddress(*addr)
 	if err != nil {
 		return 550, "Invalid address", false
+	}
+
+	// Check for relay and allow only if sender has authenticated
+	if !isLocalAddress(recipient) && session.Sender == nil {
+		return 553, "We don't relay mail to remote addresses", false
 	}
 
 	session.Recipients = append(session.Recipients, *recipient)
@@ -251,6 +294,7 @@ func processMAIL(session *Session, line string) (int, string, bool) {
 func createReceived(session *Session) (string, error) {
 	rcv := "Received: from "
 	// remote server info
+	rcv += os.Getenv("TCPREMOTEIP")
 	rcv += " by "
 	rcv += *helo
 	rcv += " with SMTP; "
@@ -382,21 +426,12 @@ func processVRFY(session *Session, line string) (int, string, bool) {
 	return 500, "VRFY not supported", false
 }
 
-// isLocalAddress checks whether the address is local; this should probably be moved to some sort of domain package later
-func isLocalAddress(input string) bool {
-	return false
-}
-
-// extractDomainPath transforms a domain into a filesystem path
-func extractDomainPath(input string) (string, error) {
-	var result string
-	parts := strings.Split(input, ".")
-	for _, part := range parts {
-		if strings.HasPrefix(part, ".") {
-			return "", errors.New("extraneous dot detected")
+// isLocalAddress checks whether the address is local
+func isLocalAddress(addr *address.Address) bool {
+	if dom, err := domain.GetDomain(*addr.Domain); err == nil && dom != nil {
+		if user, err := dom.GetUser(*addr.User); err == nil && user != nil {
+			return true
 		}
-
 	}
-
-	return result, nil
+	return false
 }

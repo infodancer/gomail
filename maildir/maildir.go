@@ -20,7 +20,6 @@ func createUniqueName() string {
 	center := rand.Int63()
 	right, err := os.Hostname()
 	if err != nil {
-
 	}
 
 	result := fmt.Sprintf("%v.%v.%v", left, center, right)
