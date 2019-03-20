@@ -51,11 +51,13 @@ var logger *log.Logger
 var reader *bufio.Reader
 var helo *string
 var spamc *string
+var checkpasswd *string
 
 func main() {
 	helo = flag.String("helo", "h", "The helo string to use when greeting clients")
 	recipientLimit = flag.Int("maxrcpt", 100, "The maximum number of recipients on a single message")
 	spamc = flag.String("spamc", "/usr/bin/spamc", "The path to spamassassin's spamc client")
+	checkpasswd = flag.String("checkpasswd", "", "The path to a checkpassword program")
 
 	logger = log.New(os.Stderr, "", 0)
 	logger.Println("gomail smtpd started")
@@ -67,6 +69,14 @@ func main() {
 			helo = &session.LocalIP
 		}
 	}
+
+	if checkpasswd != nil {
+		logger.Println("checkpassword support not yet implemented")
+	}
+	if spamc != nil {
+		logger.Println("spamc support not yet tested")
+	}
+
 	handleConnection(&session)
 }
 
