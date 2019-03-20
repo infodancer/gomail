@@ -90,7 +90,7 @@ func initializeSessionFromEnvironment(session *Session) {
 	session.RemoteHost = os.Getenv("TCPREMOTEHOST")
 }
 
-// sendLine accepts a line without linefeeds and sends it with network linefeeds
+// sendLine accepts a line without linefeeds and sends it with network linefeeds and the provided response code
 func sendCodeLine(code int, line string) {
 	fmt.Print(code, " ", line, "\r\n")
 }

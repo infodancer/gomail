@@ -1,0 +1,11 @@
+Milters are mail filters that run outside of a smtp daemon but communicate
+with it following a defined network protocol.  Similar, but not identical,
+to spamassassin used with spamc.  Popular with sendmail and postfix for 
+implementing various mail filtering capabilities.
+
+No reason not to support it here, if the effort is reasonable.  But basic
+functionality will need to be implemented first.
+
+See this url for milter documentation:
+
+https://github.com/avar/sendmail-pmilter/blob/master/doc/milter-protocol.txt
