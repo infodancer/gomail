@@ -6,14 +6,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"gomail/address"
-	"gomail/domain"
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"infodancer.org/gomail/address"
+	"infodancer.org/gomail/domain"
 )
 
 // Session describes the current session
@@ -49,34 +50,50 @@ type Session struct {
 var recipientLimit *int
 var logger *log.Logger
 var reader *bufio.Reader
-var helo *string
+var banner *string
+var defaultBanner string
 var spamc *string
 var checkpasswd *string
+var domainroot *string
+var maxsize *int64
 
 func main() {
-	helo = flag.String("helo", "h", "The helo string to use when greeting clients")
+	banner = flag.String("banner", "", "The banner string to use when greeting clients")
 	recipientLimit = flag.Int("maxrcpt", 100, "The maximum number of recipients on a single message")
-	spamc = flag.String("spamc", "/usr/bin/spamc", "The path to spamassassin's spamc client")
+	spamc = flag.String("spamc", "", "The path to spamassassin's spamc client")
 	checkpasswd = flag.String("checkpasswd", "", "The path to a checkpassword program")
+	domainroot = flag.String("domainroot", "", "The path to the domain heirarchy; defaults to the current directory")
+	maxsize = flag.Int64("maxsize", 0, "The maximum message size to allow in bytes; the default is 0, meaning unlimited")
+	defaultBanner = "anonymous"
 
 	logger = log.New(os.Stderr, "", 0)
 	logger.Println("gomail smtpd started")
 	session := Session{}
-	// Default helo to localhost if not manually set
-	if helo == nil {
-		helo = &session.LocalHost
-		if helo == nil || len(*helo) == 0 {
-			helo = &session.LocalIP
+
+	// Default banner to listening IP if not manually set
+	if len(*banner) == 0 {
+		banner = &session.LocalHost
+		if len(*banner) == 0 {
+			banner = &session.LocalIP
+			if len(*banner) == 0 {
+				banner = &defaultBanner
+			}
 		}
 	}
 
-	if checkpasswd != nil {
+	if len(*checkpasswd) > 0 {
 		logger.Println("checkpassword support not yet implemented")
 	}
-	if spamc != nil {
+	if len(*spamc) > 0 {
 		logger.Println("spamc support not yet tested")
 	}
-
+	if len(*domainroot) > 0 {
+		// If the user gives us a value, use it
+		domain.SetDomainRoot(*domainroot)
+	} else {
+		// Otherwise we use domains in the current directory for now... ease of testing
+		domain.SetDomainRoot("domains")
+	}
 	handleConnection(&session)
 }
 
@@ -112,7 +129,7 @@ func sendLine(line string) {
 
 func handleConnection(session *Session) {
 	session.Started = time.Now()
-	sendCodeLine(220, *helo+" ESMTP")
+	sendCodeLine(220, *banner+" NO UCE ESMTP")
 
 	reader = bufio.NewReader(os.Stdin)
 	for finished := false; !finished; {
@@ -142,6 +159,10 @@ func handleInputLine(session *Session, line string) (int, string, bool) {
 			sendLine("250-8BITMIME")
 			sendLine("250-PIPELINING")
 			sendLine("250-AUTH CRAM-MD5")
+			if *maxsize != 0 {
+				size := strconv.FormatInt(*maxsize, 10)
+				sendLine("250-SIZE " + size)
+			}
 			return processEHLO(session, line)
 		}
 	case "AUTH":
@@ -273,10 +294,20 @@ func processRCPT(session *Session, line string) (int, string, bool) {
 	}
 
 	// Check for relay and allow only if sender has authenticated
-	if !isLocalAddress(recipient) && session.Sender == nil {
-		return 553, "We don't relay mail to remote addresses", false
+	dom, err := domain.GetDomain(*recipient.Domain)
+	if session.Sender == nil {
+		// Only bother to check domain if the sender is nil
+		if dom == nil {
+			return 551, "We don't relay mail to remote addresses", false
+		}
 	}
 
+	// Check for local recipient existing if the domain is local
+	if !isLocalAddress(recipient) && dom != nil {
+		return 550, "User does not exist", false
+	}
+
+	// At this point, we are willing to accept this recipient
 	session.Recipients = append(session.Recipients, *recipient)
 	return 250, "OK", false
 }
@@ -306,7 +337,7 @@ func createReceived(session *Session) (string, error) {
 	// remote server info
 	rcv += os.Getenv("TCPREMOTEIP")
 	rcv += " by "
-	rcv += *helo
+	rcv += *banner
 	rcv += " with SMTP; "
 	rcv += time.Now().String()
 	return rcv, nil
@@ -438,8 +469,11 @@ func processVRFY(session *Session, line string) (int, string, bool) {
 
 // isLocalAddress checks whether the address is local
 func isLocalAddress(addr *address.Address) bool {
+	logger.Println("isLocalAddress(" + *addr.User + "@" + *addr.Domain + ")")
 	if dom, err := domain.GetDomain(*addr.Domain); err == nil && dom != nil {
+		logger.Println("Found domain " + dom.Name + " at " + dom.Path)
 		if user, err := dom.GetUser(*addr.User); err == nil && user != nil {
+			logger.Println("Found user " + user.Name)
 			return true
 		}
 	}
