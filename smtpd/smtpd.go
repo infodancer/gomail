@@ -303,8 +303,26 @@ func processRCPT(session *Session, line string) (int, string, bool) {
 	}
 
 	// Check for local recipient existing if the domain is local
-	if !isLocalAddress(recipient) && dom != nil {
-		return 550, "User does not exist", false
+	if dom != nil {
+		// We know the domain exists locally now
+		user, err := dom.GetUser(*recipient.User)
+		// Temporary error if we couldn't access the user for some reason
+		if err != nil {
+			return 451, "Address does not exist or cannot receive mail at this time, try again later", false
+		}
+		// If we got back nil without error, they really don't exist
+		if user == nil {
+			return 550, "User does not exist", false
+		}
+		// But if they do exist, check that their mailbox also exists
+		maildir, err := dom.GetUserMaildir(*recipient.User)
+		if err != nil {
+			return 451, "Address does not exist or cannot receive mail at this time, try again later", false
+		}
+		// If we got back nil without error, the maildir doesn't exist, but this is a temporary (hopefully) setup problem
+		if maildir == nil {
+			return 451, "Maildir does not exist; try again later", false
+		}
 	}
 
 	// At this point, we are willing to accept this recipient
@@ -465,17 +483,4 @@ func processNOOP(session *Session, line string) (int, string, bool) {
 
 func processVRFY(session *Session, line string) (int, string, bool) {
 	return 500, "VRFY not supported", false
-}
-
-// isLocalAddress checks whether the address is local
-func isLocalAddress(addr *address.Address) bool {
-	logger.Println("isLocalAddress(" + *addr.User + "@" + *addr.Domain + ")")
-	if dom, err := domain.GetDomain(*addr.Domain); err == nil && dom != nil {
-		logger.Println("Found domain " + dom.Name + " at " + dom.Path)
-		if user, err := dom.GetUser(*addr.User); err == nil && user != nil {
-			logger.Println("Found user " + user.Name)
-			return true
-		}
-	}
-	return false
 }

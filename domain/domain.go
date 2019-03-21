@@ -54,7 +54,7 @@ func GetDomain(name string) (*Domain, error) {
 
 // GetUser provides a user object based on the current domain and the provided user name
 func (domain *Domain) GetUser(name string) (*User, error) {
-	userpath := filepath.Join(domain.Path, name)
+	userpath := filepath.Join(domain.Path, "users", name)
 	logger.Println("Checking user path " + userpath)
 	if _, err := os.Stat(userpath); os.IsNotExist(err) {
 		err := fmt.Errorf("user does not exist: %v", err)
@@ -62,17 +62,30 @@ func (domain *Domain) GetUser(name string) (*User, error) {
 	}
 	var user User
 	user = User{}
+	user.Name = name
+	user.Path = filepath.Join(domain.Path, "users", name)
+	user.MaildirPath = filepath.Join(user.Path, "Maildir")
 	return &user, nil
 }
 
 // GetUserMaildir retrieves the top-level maildir for a specified user
-func (domain *Domain) GetUserMaildir(name *string) (*maildir.Maildir, error) {
-	user, err := domain.GetUser(*name)
+func (domain *Domain) GetUserMaildir(name string) (*maildir.Maildir, error) {
+	user, err := domain.GetUser(name)
 	if err != nil {
 		err := fmt.Errorf("user does not exist: %v", err)
 		return nil, err
 	}
-	return maildir.GetMaildir(user.MaildirPath)
+	logger.Println("Checking for maildir at " + user.MaildirPath)
+	result, err := maildir.GetMaildir(user.MaildirPath)
+	if err != nil {
+		err := fmt.Errorf("could not load maildir from %v: %v", user.MaildirPath, err)
+		return nil, err
+	}
+	if result == nil {
+		err := fmt.Errorf("maildir does not exist: %v", user.MaildirPath)
+		return nil, err
+	}
+	return result, nil
 }
 
 // validateDomainName ensures a domain name is safe to use for a filename
