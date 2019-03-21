@@ -18,12 +18,28 @@ func TestExtractAddressPart(t *testing.T) {
 	}
 }
 
+func TestIsSuspiciousAddress(t *testing.T) {
+	example1 := "test@example.com"
+	example2 := "test-folder@example.com"
+	example3 := "../../../test@example.com"
+	if isSuspiciousAddress(example1) {
+		t.Error("IsSuspiciousAddress reported valid address as suspicious: ", example1)
+	}
+	if isSuspiciousAddress(example2) {
+		t.Error("IsSuspiciousAddress reported valid address as suspicious: ", example2)
+	}
+	if !isSuspiciousAddress(example3) {
+		t.Error("IsSuspiciousAddress reported suspicious address as valid: ", example3)
+	}
+
+}
+
 func TestHandleInputLine(t *testing.T) {
 	var session Session
 	if code, result, finished := handleInputLine(&session, "HELO hi"); code != 250 || !strings.HasSuffix(result, "Hello") || finished {
 		t.Error("Invalid response to HELO: ", result)
 	}
-	if code, result, finished := handleInputLine(&session, "EHLO hi"); code != 250 || !strings.HasSuffix(result, " Hello") || finished {
+	if code, result, finished := handleInputLine(&session, "EHLO hi"); code != 250 || !strings.HasSuffix(result, "Hello") || finished {
 		t.Error("Invalid response to EHLO: ", result)
 	}
 	if code, result, finished := handleInputLine(&session, "NOOP"); code != 250 || !strings.HasPrefix(result, "OK") || finished {

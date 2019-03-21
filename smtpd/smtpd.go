@@ -159,7 +159,7 @@ func handleInputLine(session *Session, line string) (int, string, bool) {
 			sendLine("250-8BITMIME")
 			sendLine("250-PIPELINING")
 			sendLine("250-AUTH CRAM-MD5")
-			if *maxsize != 0 {
+			if maxsize != nil && *maxsize != 0 {
 				size := strconv.FormatInt(*maxsize, 10)
 				sendLine("250-SIZE " + size)
 			}
@@ -285,11 +285,19 @@ func processRCPT(session *Session, line string) (int, string, bool) {
 	}
 	// Check if this is being sent to a bounce address
 	if len(*addr) == 0 {
+		logger.Println("Rejecting RCPT TO to bounce address: " + *addr)
 		return 503, "We don't accept mail to that address", false
+	}
+
+	// Before we actually do filesystem operations, sanitize the input
+	if isSuspiciousAddress(*addr) {
+		logger.Println("Rejecting suspicious RCPT TO: " + *addr)
+		return 550, "Invalid address", false
 	}
 
 	recipient, err := address.CreateAddress(*addr)
 	if err != nil {
+		logger.Println("CreateAddress failed: " + *addr)
 		return 550, "Invalid address", false
 	}
 
@@ -308,6 +316,7 @@ func processRCPT(session *Session, line string) (int, string, bool) {
 		user, err := dom.GetUser(*recipient.User)
 		// Temporary error if we couldn't access the user for some reason
 		if err != nil {
+			logger.Println("Error from GetUser: ", err)
 			return 451, "Address does not exist or cannot receive mail at this time, try again later", false
 		}
 		// If we got back nil without error, they really don't exist
@@ -317,17 +326,38 @@ func processRCPT(session *Session, line string) (int, string, bool) {
 		// But if they do exist, check that their mailbox also exists
 		maildir, err := dom.GetUserMaildir(*recipient.User)
 		if err != nil {
+			logger.Println("User exists but GetUserMaildir errors: ", err)
 			return 451, "Address does not exist or cannot receive mail at this time, try again later", false
 		}
 		// If we got back nil without error, the maildir doesn't exist, but this is a temporary (hopefully) setup problem
 		if maildir == nil {
+			logger.Println("User exists but maildir is nil: ", err)
 			return 451, "Maildir does not exist; try again later", false
 		}
 	}
 
 	// At this point, we are willing to accept this recipient
 	session.Recipients = append(session.Recipients, *recipient)
+	logger.Println("Receipient accepted: ", *addr)
 	return 250, "OK", false
+}
+
+// isSuspiciousInput looks for input that contains filename elements
+// This method should be used to check addresses or domain names coming from external sources
+// It's not perfect, but it works for now
+func isSuspiciousAddress(input string) bool {
+	// isSafe := regexp.MustCompile(`^[A-Za-z]+@[A-Za-z]+$`).MatchString
+	i := strings.Index(input, "..")
+	if i == -1 {
+		i = strings.Index(input, "/")
+		if i == -1 {
+			i = strings.Index(input, "\\")
+			if i == -1 {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func processMAIL(session *Session, line string) (int, string, bool) {
