@@ -15,6 +15,7 @@ import (
 
 	"infodancer.org/gomail/address"
 	"infodancer.org/gomail/domain"
+	"infodancer.org/gomail/queue"
 )
 
 // Session describes the current session
@@ -56,14 +57,17 @@ var spamc *string
 var checkpasswd *string
 var domainroot *string
 var maxsize *int64
+var msgqueue *queue.Queue
+var queuedir *string
 
 func main() {
 	banner = flag.String("banner", "", "The banner string to use when greeting clients")
 	recipientLimit = flag.Int("maxrcpt", 100, "The maximum number of recipients on a single message")
 	spamc = flag.String("spamc", "", "The path to spamassassin's spamc client")
 	checkpasswd = flag.String("checkpasswd", "", "The path to a checkpassword program")
-	domainroot = flag.String("domainroot", "", "The path to the domain heirarchy; defaults to the current directory")
+	domainroot = flag.String("domainroot", "data/domains", "The path to the domain heirarchy; defaults to the domains directory under the current directory")
 	maxsize = flag.Int64("maxsize", 0, "The maximum message size to allow in bytes; the default is 0, meaning unlimited")
+	queuedir = flag.String("queue", "data/queue", "The directory to use as a queue for incoming messages")
 	defaultBanner = "anonymous"
 
 	logger = log.New(os.Stderr, "", 0)
@@ -93,6 +97,12 @@ func main() {
 	} else {
 		// Otherwise we use domains in the current directory for now... ease of testing
 		domain.SetDomainRoot("domains")
+	}
+
+	var err error
+	msgqueue, err = queue.GetQueue(*queuedir)
+	if err != nil {
+		logger.Printf("error opening mail queue from %v: %v", queuedir, err)
 	}
 	handleConnection(&session)
 }
@@ -447,50 +457,95 @@ func processDATA(session *Session, line string) (int, string, bool) {
 
 // CheckSpam runs spamc to see if a message is spam, and returns either an error, or the modified message
 func checkSpam(session *Session) (string, error) {
-	result := ""
-	cmd := exec.Command(*spamc)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
-
-	defer stdin.Close()
-	defer stdout.Close()
-
-	spamwriter := bufio.NewWriter(stdin)
-	spamwriter = bufio.NewWriterSize(spamwriter, len(session.Data))
-	spamwriter.WriteString(session.Data)
-
-	// Create a reader at least as big as the original message with extra space for headers
-	spamreader := bufio.NewReader(stdout)
-	spamreader = bufio.NewReaderSize(spamreader, len(session.Data)+1024)
-
-	// Read the message back out
-	for finished := false; !finished; {
-		line, err := reader.ReadString('\n')
+	if len(*spamc) > 0 {
+		logger.Printf("Executing spamc: %v", *spamc)
+		cmd := exec.Command(*spamc)
+		stdin, err := cmd.StdinPipe()
 		if err != nil {
-			break
+			log.Fatal(err)
 		}
-		result += line
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := cmd.Start(); err != nil {
+			log.Fatal(err)
+		}
+
+		defer stdin.Close()
+		defer stdout.Close()
+
+		result := ""
+		spamwriter := bufio.NewWriter(stdin)
+		spamwriter = bufio.NewWriterSize(spamwriter, len(session.Data))
+		spamwriter.WriteString(session.Data)
+
+		// Create a reader at least as big as the original message with extra space for headers
+		spamreader := bufio.NewReader(stdout)
+		spamreader = bufio.NewReaderSize(spamreader, len(session.Data)+1024)
+
+		// Read the message back out
+		for finished := false; !finished; {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				break
+			}
+			result += line
+		}
+		err = cmd.Wait()
+		if err != nil {
+			log.Fatal(err)
+			return "", err
+		}
+		return result, nil
 	}
-	err = cmd.Wait()
-	if err != nil {
-		log.Fatal(err)
-		return "", err
-	}
-	return result, nil
+	logger.Printf("spamc not configured!")
+	return session.Data, nil
 }
 
 // enqueue places the current message (as contained in the session) into the disk queue; ie accepting delivery
 func enqueue(session *Session) error {
-	return errors.New("Queuing code not yet implemented")
+	if session != nil {
+		var err error
+		env := queue.Envelope{}
+		if session.Sender != nil {
+			env.Sender, err = session.Sender.ToString()
+			if err != nil {
+				log.Fatal(err)
+				return errors.New("queue attempt failed, invalid sender")
+			}
+		}
+
+		if session.From != nil {
+			env.From, err = session.From.ToString()
+			if err != nil {
+				log.Fatal(err)
+				return errors.New("queue attempt failed, invalid sender")
+			}
+		} else {
+			// This is a bounce message
+			env.From = "<>"
+		}
+
+		for _, recipient := range session.Recipients {
+			er := queue.EnvelopeRecipient{}
+			er.Recipient, err = recipient.ToString()
+			if err != nil {
+				log.Fatal(err)
+				return errors.New("queue attempt failed, invalid recipient")
+			}
+			logger.Printf("adding recipient to envelope: %v", er.Recipient)
+			er.Delivered = false
+			env.Recipients = append(env.Recipients, er)
+		}
+		err = msgqueue.Enqueue(env, session.Data)
+		if err != nil {
+			log.Fatal(err)
+			return errors.New("queue attempt failed")
+		}
+		return nil
+	}
+	return errors.New("no current session to enqueue")
 }
 
 // processQUIT simply terminates the session

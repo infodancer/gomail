@@ -17,6 +17,21 @@ type Address struct {
 	Folder *string
 }
 
+// ToString produces a string version of the parsed address
+func (address Address) ToString() (string, error) {
+	if address.User != nil {
+		result := *address.User
+		if address.Folder != nil {
+			result = result + "-" + *address.Folder
+		}
+		if address.Domain != nil {
+			result = result + "@" + *address.Domain
+		}
+		return result, nil
+	}
+	return "", errors.New("invalid address; user component is required")
+}
+
 // CreateAddress creates an address structure from an input user@host
 func CreateAddress(input string) (*Address, error) {
 	result := Address{}
