@@ -1,3 +1,3 @@
 #!/bin/sh
-go run smtpd/smtpd.go --domainroot= --queuedir= 
+go run smtpd/smtpd.go --spamc=/usr/bin/spamc
 

@@ -68,6 +68,8 @@ func main() {
 	domainroot = flag.String("domainroot", "data/domains", "The path to the domain heirarchy; defaults to the domains directory under the current directory")
 	maxsize = flag.Int64("maxsize", 0, "The maximum message size to allow in bytes; the default is 0, meaning unlimited")
 	queuedir = flag.String("queue", "data/queue", "The directory to use as a queue for incoming messages")
+	flag.Parse()
+
 	defaultBanner = "anonymous"
 
 	logger = log.New(os.Stderr, "", 0)
@@ -89,7 +91,7 @@ func main() {
 		logger.Println("checkpassword support not yet implemented")
 	}
 	if len(*spamc) > 0 {
-		logger.Println("spamc support not yet tested")
+		logger.Printf("spamc: %v", *spamc)
 	}
 	if len(*domainroot) > 0 {
 		// If the user gives us a value, use it
@@ -348,7 +350,7 @@ func processRCPT(session *Session, line string) (int, string, bool) {
 
 	// At this point, we are willing to accept this recipient
 	session.Recipients = append(session.Recipients, *recipient)
-	logger.Println("Receipient accepted: ", *addr)
+	logger.Println("Recipient accepted: ", *addr)
 	return 250, "OK", false
 }
 
@@ -398,6 +400,7 @@ func createReceived(session *Session) (string, error) {
 	rcv += *banner
 	rcv += " with SMTP; "
 	rcv += time.Now().String()
+	rcv += "\n"
 	return rcv, nil
 }
 
@@ -425,7 +428,7 @@ func processDATA(session *Session, line string) (int, string, bool) {
 		if err != nil {
 			break
 		}
-		logger.Println(">" + line)
+		logger.Printf(">%v\n", line)
 		if strings.HasPrefix(line, ".") {
 			if strings.HasPrefix(line, "..") {
 				// Remove escaped period character
@@ -433,6 +436,8 @@ func processDATA(session *Session, line string) (int, string, bool) {
 			} else {
 				// Check with spamc if needed
 				if spamc != nil {
+					logger.Printf("session.Data is %v bytes", len(session.Data))
+					logger.Printf("session.Data:\n%v", session.Data)
 					msg, err := checkSpam(session)
 					if err != nil {
 						// Temporary failure if we can't check it
@@ -448,8 +453,11 @@ func processDATA(session *Session, line string) (int, string, bool) {
 				}
 				return 250, "message accepted for delivery", false
 			}
-			session.Data += line
 		}
+		logger.Printf("Appended %v bytes to existing %v bytes in session.Data", len(line), len(session.Data))
+		session.Data += line
+		session.Data += "\n"
+		logger.Printf("New session.Data is %v bytes", len(session.Data))
 	}
 	// If we somehow get here without the message being completed, return a temporary failure
 	return 451, "message could not be accepted at this time, try again later", false
@@ -458,7 +466,6 @@ func processDATA(session *Session, line string) (int, string, bool) {
 // CheckSpam runs spamc to see if a message is spam, and returns either an error, or the modified message
 func checkSpam(session *Session) (string, error) {
 	if len(*spamc) > 0 {
-		logger.Printf("Executing spamc: %v", *spamc)
 		cmd := exec.Command(*spamc)
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
@@ -468,30 +475,45 @@ func checkSpam(session *Session) (string, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		logger.Printf("Executing spamc: %v", *spamc)
 		if err := cmd.Start(); err != nil {
 			log.Fatal(err)
 		}
 
-		defer stdin.Close()
-		defer stdout.Close()
-
+		logger.Printf("Beginning output processing: %v", *spamc)
 		result := ""
+
+		// Create reader and writer
 		spamwriter := bufio.NewWriter(stdin)
 		spamwriter = bufio.NewWriterSize(spamwriter, len(session.Data))
-		spamwriter.WriteString(session.Data)
+		// spamreader := bufio.NewReader(stdout)
+		// spamreader = bufio.NewReaderSize(spamreader, len(session.Data)+1024)
+
+		// Write and flush
+		l, err := spamwriter.WriteString(session.Data)
+		logger.Printf("Wrote %v bytes of %v to spamwriter", l, len(session.Data))
+		spamwriter.Flush()
+		stdin.Close()
+		logger.Printf("Message written to spamc")
 
 		// Create a reader at least as big as the original message with extra space for headers
-		spamreader := bufio.NewReader(stdout)
-		spamreader = bufio.NewReaderSize(spamreader, len(session.Data)+1024)
 
-		// Read the message back out
-		for finished := false; !finished; {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				break
-			}
+		logger.Printf("Reading message back from spamc")
+
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			logger.Println(line)
 			result += line
+			result += "\n"
 		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		logger.Printf("Waiting for spamc to exit")
 		err = cmd.Wait()
 		if err != nil {
 			log.Fatal(err)
