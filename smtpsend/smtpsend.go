@@ -59,9 +59,39 @@ func main() {
 		os.Exit(1)
 	}
 
+	heloname := "localhost"
 	if con.IsESMTPSupported {
-
+		err = con.SendEHLO(&heloname)
+	} else {
+		err = con.SendHELO(&heloname)
 	}
+
+	if err != nil {
+		fmt.Println("Remote server not ready; greeting failed")
+		os.Exit(1)
+	}
+
+	// Handle authentication here
+
+	// Actually send the message
+	con.SendMailFrom(sender)
+	if err != nil {
+		fmt.Println("Remote server not ready; greeting failed")
+		os.Exit(1)
+	}
+
+	con.SendRcptTo(recipient)
+	if err != nil {
+		fmt.Println("Remote server not ready; greeting failed")
+		os.Exit(1)
+	}
+	/*
+		con.SendData()
+		if err != nil {
+			fmt.Println("Remote server not ready; greeting failed")
+			os.Exit(1)
+		}
+	*/
 }
 
 func createSMTPConnection(hostname *string) (*SMTPConnection, error) {
@@ -69,8 +99,8 @@ func createSMTPConnection(hostname *string) (*SMTPConnection, error) {
 	if !isPortSpecified(hostname) {
 		// Default to port 25
 		*host += ":25"
-	} 
-	
+	}
+
 	conn, err := net.Dial("tcp", *host)
 	if err != nil {
 		return nil, err
@@ -93,6 +123,62 @@ func createSMTPConnection(hostname *string) (*SMTPConnection, error) {
 		return &result, nil
 	}
 	return nil, errors.New(*line)
+}
+
+// SendMail sends the actual message
+func (c SMTPConnection) SendMail(from *string, to *string, data *string) error {
+	var err error
+	err = c.SendMailFrom(from)
+	if err != nil {
+		return err
+	}
+
+	err = c.SendRcptTo(from)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SendEHLO sends the greeting
+func (c SMTPConnection) SendEHLO(clienthost *string) error {
+	line := "EHLO " + *clienthost
+	err := c.SendLine(&line)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SendHELO sends the greeting
+func (c SMTPConnection) SendHELO(clienthost *string) error {
+	line := "HELO " + *clienthost
+	err := c.SendLine(&line)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SendMailFrom sends the greeting
+func (c SMTPConnection) SendMailFrom(sender *string) error {
+	line := "MAIL FROM: <" + *sender + ">"
+	err := c.SendLine(&line)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SendRcptTo sends the greeting
+func (c SMTPConnection) SendRcptTo(sender *string) error {
+	line := "RCPT TO: <" + *sender + ">"
+	err := c.SendLine(&line)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func isPortSpecified(hostname *string) bool {
