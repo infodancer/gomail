@@ -1,10 +1,9 @@
-package main
+package smtpd
 
 import (
 	"bufio"
 	"encoding/base64"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -20,24 +19,6 @@ import (
 
 // Session describes the current session
 type Session struct {
-	// Started indicates the time the session began
-	Started time.Time
-	// Activity indicates the time of last activity
-	Activity time.Time
-	// Protocol contains the protocol, usually TCP
-	Protocol string
-	// LocalIP contains the local (listening) ip address
-	LocalIP string
-	// LocalPort contains the local (listening) port number
-	LocalPort int
-	// LocalHost contains the hostname of the server
-	LocalHost string
-	// RemoteIP contains the remote ip address
-	RemoteIP string
-	// RemotePort contains the remote port number
-	RemotePort int
-	// RemoteHost contains the hostname of the remote client
-	RemoteHost string
 	// Sender is the authenticated user sending the message; nil if not authenticated
 	Sender *address.Address
 	// From is the claimed sender of the message
@@ -51,152 +32,77 @@ type Session struct {
 var recipientLimit *int
 var logger *log.Logger
 var reader *bufio.Reader
-var banner *string
-var defaultBanner string
-var spamc *string
-var checkpasswd *string
-var domainroot *string
-var maxsize *int64
-var msgqueue *queue.Queue
-var queuedir *string
 
-func main() {
-	banner = flag.String("banner", "", "The banner string to use when greeting clients")
-	recipientLimit = flag.Int("maxrcpt", 100, "The maximum number of recipients on a single message")
-	spamc = flag.String("spamc", "", "The path to spamassassin's spamc client")
-	checkpasswd = flag.String("checkpasswd", "", "The path to a checkpassword program")
-	domainroot = flag.String("domainroot", "data/domains", "The path to the domain heirarchy; defaults to the domains directory under the current directory")
-	maxsize = flag.Int64("maxsize", 0, "The maximum message size to allow in bytes; the default is 0, meaning unlimited")
-	queuedir = flag.String("queue", "data/queue", "The directory to use as a queue for incoming messages")
-	flag.Parse()
+// ProtocolHandler handles server-side SMTP
+type ProtocolHandler struct {
+	maxsize  *int64
+	spamc    *string
+	Session  *Session
+	msgqueue *queue.Queue
+}
 
-	defaultBanner = "anonymous"
-
-	logger = log.New(os.Stderr, "", 0)
-	logger.Println("gomail smtpd started")
-	session := Session{}
-
-	// Default banner to listening IP if not manually set
-	if len(*banner) == 0 {
-		banner = &session.LocalHost
-		if len(*banner) == 0 {
-			banner = &session.LocalIP
-			if len(*banner) == 0 {
-				banner = &defaultBanner
-			}
-		}
-	}
-
-	if len(*checkpasswd) > 0 {
-		logger.Println("checkpassword support not yet implemented")
-	}
-	if len(*spamc) > 0 {
-		logger.Printf("spamc: %v", *spamc)
-	}
-	if len(*domainroot) > 0 {
-		// If the user gives us a value, use it
-		domain.SetDomainRoot(*domainroot)
-	} else {
-		// Otherwise we use domains in the current directory for now... ease of testing
-		domain.SetDomainRoot("domains")
-	}
-
+// CreateSmtpdProtocolHandler creates a protocol handler for smtpd
+func CreateSmtpdProtocolHandler(properties map[string]string) *ProtocolHandler {
 	var err error
-	msgqueue, err = queue.GetQueue(*queuedir)
+	queuedir := properties["queuedir"]
+	handler := ProtocolHandler{}
+	handler.msgqueue, err = queue.GetQueue(queuedir)
 	if err != nil {
 		logger.Printf("error opening mail queue from %v: %v", queuedir, err)
 	}
-	handleConnection(&session)
+
+	return &handler
 }
 
-func initializeSessionFromEnvironment(session *Session) {
-	session.Protocol = os.Getenv("PROTO")
-	session.LocalIP = os.Getenv("TCPLOCALIP")
-	lport, err := strconv.Atoi(os.Getenv("TCPLOCALPORT"))
-	if err != nil {
-		session.LocalPort = 0
-	}
-	session.LocalPort = lport
-	if err != nil {
-	}
-	session.LocalHost = os.Getenv("TCPLOCALHOST")
-	session.RemoteIP = os.Getenv("TCPREMOTEIP")
-	rport, err := strconv.Atoi(os.Getenv("TCPREMOTEPORT"))
-	if err != nil {
-		session.RemotePort = 0
-	}
-	session.RemotePort = rport
-	session.RemoteHost = os.Getenv("TCPREMOTEHOST")
-}
-
-// sendLine accepts a line without linefeeds and sends it with network linefeeds and the provided response code
-func sendCodeLine(code int, line string) {
+// SendCodeLine accepts a line without linefeeds and sends it with network linefeeds and the provided response code
+func (handler *ProtocolHandler) SendCodeLine(code int, line string) {
 	fmt.Print(code, " ", line, "\r\n")
 }
 
-// sendLine accepts a line without linefeeds and sends it with network linefeeds
-func sendLine(line string) {
+// SendLine accepts a line without linefeeds and sends it with network linefeeds
+func (handler *ProtocolHandler) SendLine(line string) {
 	fmt.Print(line, "\r\n")
 }
 
-func handleConnection(session *Session) {
-	session.Started = time.Now()
-	sendCodeLine(220, *banner+" NO UCE ESMTP")
-
-	reader = bufio.NewReader(os.Stdin)
-	for finished := false; !finished; {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			break
-		}
-		logger.Println(">" + line)
-		code, resp, finished := handleInputLine(session, line)
-		sendCodeLine(code, resp)
-		if finished {
-			break
-		}
-	}
-}
-
-func handleInputLine(session *Session, line string) (int, string, bool) {
-	session.Activity = time.Now()
+// HandleInputLine accepts a line and handles it
+func (handler *ProtocolHandler) HandleInputLine(session *Session, line string) (int, string, bool) {
 	cmd := strings.Split(line, " ")
 	command := strings.ToUpper(strings.TrimSpace(cmd[0]))
 	switch command {
 	case "HELO":
-		return processHELO(session, line)
+		return handler.processHELO(session, line)
 	case "EHLO":
 		{
 			// This is a bit of a special case because of extensions
-			sendLine("250-8BITMIME")
-			sendLine("250-PIPELINING")
-			sendLine("250-AUTH CRAM-MD5")
-			if maxsize != nil && *maxsize != 0 {
-				size := strconv.FormatInt(*maxsize, 10)
-				sendLine("250-SIZE " + size)
+			handler.SendLine("250-8BITMIME")
+			handler.SendLine("250-PIPELINING")
+			handler.SendLine("250-AUTH CRAM-MD5")
+			if handler.maxsize != nil && *handler.maxsize != 0 {
+				size := strconv.FormatInt(*handler.maxsize, 10)
+				handler.SendLine("250-SIZE " + size)
 			}
-			return processEHLO(session, line)
+			return handler.processEHLO(session, line)
 		}
 	case "AUTH":
-		return processAUTH(session, line)
+		return handler.processAUTH(session, line)
 	case "RCPT":
-		return processRCPT(session, line)
+		return handler.processRCPT(session, line)
 	case "MAIL":
-		return processMAIL(session, line)
+		return handler.processMAIL(session, line)
 	case "DATA":
-		return processDATA(session, line)
+		return handler.processDATA(session, line)
 
 	// These commands are not vital
 	case "RSET":
-		return processRSET(session, line)
+		return handler.processRSET(session, line)
 	case "NOOP":
-		return processNOOP(session, line)
+		return handler.processNOOP(session, line)
 	case "VRFY":
-		return processVRFY(session, line)
+		return handler.processVRFY(session, line)
 
 	// QUIT terminates the session
 	case "QUIT":
-		return processQUIT(session, line)
+		return handler.processQUIT(session, line)
 	default:
 		return 500, "Unrecognized command", false
 	}
@@ -218,7 +124,7 @@ func extractAddressPart(line string) (*string, error) {
 }
 
 // processAUTH handles the auth process
-func processAUTH(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processAUTH(session *Session, line string) (int, string, bool) {
 	// For now, we haven't implemented this
 	if strings.HasPrefix(line, "AUTH ") {
 		authType := line[5:len(line)]
@@ -227,7 +133,7 @@ func processAUTH(session *Session, line string) (int, string, bool) {
 			return 500, "Unrecognized command", false
 		}
 		challenge := createChallenge()
-		sendCodeLine(354, challenge)
+		handler.SendCodeLine(354, challenge)
 		resp, err := reader.ReadString('\n')
 		if err != nil {
 			return 550, "Authentication failed", false
@@ -273,16 +179,16 @@ func createChallenge() string {
 }
 
 // processHELO handles the standard SMTP helo
-func processHELO(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processHELO(session *Session, line string) (int, string, bool) {
 	return 250, "Hello", false
 }
 
 // processEHLO handles the extended EHLO command, but the extensions are listed elsewhere
-func processEHLO(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processEHLO(session *Session, line string) (int, string, bool) {
 	return 250, "Hello", false
 }
 
-func processRCPT(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processRCPT(session *Session, line string) (int, string, bool) {
 	addr, err := extractAddressPart(line)
 	if err != nil {
 		return 550, "Invalid address", false
@@ -372,7 +278,7 @@ func isSuspiciousAddress(input string) bool {
 	return true
 }
 
-func processMAIL(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processMAIL(session *Session, line string) (int, string, bool) {
 	if session.From != nil {
 		return 400, "MAIL FROM already sent", false
 	}
@@ -392,19 +298,18 @@ func processMAIL(session *Session, line string) (int, string, bool) {
 	return 250, "OK", false
 }
 
-func createReceived(session *Session) (string, error) {
+func (handler *ProtocolHandler) createReceived(session *Session) (string, error) {
 	rcv := "Received: from "
 	// remote server info
 	rcv += os.Getenv("TCPREMOTEIP")
 	rcv += " by "
-	rcv += *banner
 	rcv += " with SMTP; "
 	rcv += time.Now().String()
 	rcv += "\n"
 	return rcv, nil
 }
 
-func processDATA(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processDATA(session *Session, line string) (int, string, bool) {
 	// Did the user specify an envelope?
 	// Check if the sender has been set
 	if session.From == nil {
@@ -415,14 +320,14 @@ func processDATA(session *Session, line string) (int, string, bool) {
 		return 503, "need RCPT before DATA", false
 	}
 	// Generate a received header
-	rcv, err := createReceived(session)
+	rcv, err := handler.createReceived(session)
 	if err != nil {
 		return 451, "message could not be accepted at this time, try again later", false
 	}
 	session.Data = rcv
 
 	// Accept the start of message data
-	sendCodeLine(354, "Send message content; end with <CRLF>.<CRLF>")
+	handler.SendCodeLine(354, "Send message content; end with <CRLF>.<CRLF>")
 	for finished := false; !finished; {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -435,10 +340,10 @@ func processDATA(session *Session, line string) (int, string, bool) {
 				line = line[1:len(line)]
 			} else {
 				// Check with spamc if needed
-				if spamc != nil {
+				if handler.spamc != nil {
 					logger.Printf("session.Data is %v bytes", len(session.Data))
 					logger.Printf("session.Data:\n%v", session.Data)
-					msg, err := checkSpam(session)
+					msg, err := handler.checkSpam(session)
 					if err != nil {
 						// Temporary failure if we can't check it
 						return 451, "message could not be accepted at this time, try again later", false
@@ -446,7 +351,7 @@ func processDATA(session *Session, line string) (int, string, bool) {
 					// We don't block here; let the user use their filters
 					session.Data = msg
 				}
-				err := enqueue(session)
+				err := handler.enqueue(session)
 				if err != nil {
 					logger.Println("Unable to enqueue message!")
 					return 451, "message could not be accepted at this time, try again later", false
@@ -464,9 +369,9 @@ func processDATA(session *Session, line string) (int, string, bool) {
 }
 
 // CheckSpam runs spamc to see if a message is spam, and returns either an error, or the modified message
-func checkSpam(session *Session) (string, error) {
-	if len(*spamc) > 0 {
-		cmd := exec.Command(*spamc)
+func (handler *ProtocolHandler) checkSpam(session *Session) (string, error) {
+	if len(*handler.spamc) > 0 {
+		cmd := exec.Command(*handler.spamc)
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
 			log.Fatal(err)
@@ -476,12 +381,12 @@ func checkSpam(session *Session) (string, error) {
 			log.Fatal(err)
 		}
 
-		logger.Printf("Executing spamc: %v", *spamc)
+		logger.Printf("Executing spamc: %v", *handler.spamc)
 		if err := cmd.Start(); err != nil {
 			log.Fatal(err)
 		}
 
-		logger.Printf("Beginning output processing: %v", *spamc)
+		logger.Printf("Beginning output processing: %v", *handler.spamc)
 		result := ""
 
 		// Create reader and writer
@@ -526,7 +431,7 @@ func checkSpam(session *Session) (string, error) {
 }
 
 // enqueue places the current message (as contained in the session) into the disk queue; ie accepting delivery
-func enqueue(session *Session) error {
+func (handler *ProtocolHandler) enqueue(session *Session) error {
 	if session != nil {
 		var err error
 		env := queue.Envelope{}
@@ -560,7 +465,7 @@ func enqueue(session *Session) error {
 			er.Delivered = false
 			env.Recipients = append(env.Recipients, er)
 		}
-		err = msgqueue.Enqueue(env, session.Data)
+		err = handler.msgqueue.Enqueue(env, session.Data)
 		if err != nil {
 			log.Fatal(err)
 			return errors.New("queue attempt failed")
@@ -571,12 +476,12 @@ func enqueue(session *Session) error {
 }
 
 // processQUIT simply terminates the session
-func processQUIT(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processQUIT(session *Session, line string) (int, string, bool) {
 	return 221, "goodbye", true
 }
 
 // processRSET clears the session information
-func processRSET(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processRSET(session *Session, line string) (int, string, bool) {
 	session.Sender = nil
 	session.From = nil
 	session.Recipients = make([]address.Address, 0)
@@ -584,10 +489,10 @@ func processRSET(session *Session, line string) (int, string, bool) {
 	return 250, "OK", false
 }
 
-func processNOOP(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processNOOP(session *Session, line string) (int, string, bool) {
 	return 250, "OK", false
 }
 
-func processVRFY(session *Session, line string) (int, string, bool) {
+func (handler *ProtocolHandler) processVRFY(session *Session, line string) (int, string, bool) {
 	return 500, "VRFY not supported", false
 }

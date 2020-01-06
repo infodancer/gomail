@@ -85,6 +85,9 @@ func (q Queue) Enqueue(env Envelope, msg string) error {
 	// Add the message path to the envelope
 	env.MessagePath = msgFile
 	env.EnvelopePath = envFile
+
+	// Technically, to follow Maildir rules, we should write to tmp and then move
+	// However, for now, we are just writing directly
 	logger.Printf("Writing envelope to queue file: %v", envFile)
 	envMarshalled, err := json.Marshal(env)
 	if err != nil {

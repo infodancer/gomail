@@ -1,4 +1,4 @@
-package main
+package smtpd
 
 import (
 	"strings"
@@ -36,25 +36,28 @@ func TestIsSuspiciousAddress(t *testing.T) {
 
 func TestHandleInputLine(t *testing.T) {
 	var session Session
-	if code, result, finished := handleInputLine(&session, "HELO hi"); code != 250 || !strings.HasSuffix(result, "Hello") || finished {
+	properties := make(map[string]string)
+	handler := CreateSmtpdProtocolHandler(properties)
+
+	if code, result, finished := handler.HandleInputLine(&session, "HELO hi"); code != 250 || !strings.HasSuffix(result, "Hello") || finished {
 		t.Error("Invalid response to HELO: ", result)
 	}
-	if code, result, finished := handleInputLine(&session, "EHLO hi"); code != 250 || !strings.HasSuffix(result, "Hello") || finished {
+	if code, result, finished := handler.HandleInputLine(&session, "EHLO hi"); code != 250 || !strings.HasSuffix(result, "Hello") || finished {
 		t.Error("Invalid response to EHLO: ", result)
 	}
-	if code, result, finished := handleInputLine(&session, "NOOP"); code != 250 || !strings.HasPrefix(result, "OK") || finished {
+	if code, result, finished := handler.HandleInputLine(&session, "NOOP"); code != 250 || !strings.HasPrefix(result, "OK") || finished {
 		t.Error("Invalid response to NOOP: ", result)
 	}
-	if code, result, finished := handleInputLine(&session, "RSET"); code != 250 || !strings.HasPrefix(result, "OK") || finished {
+	if code, result, finished := handler.HandleInputLine(&session, "RSET"); code != 250 || !strings.HasPrefix(result, "OK") || finished {
 		t.Error("Invalid response to RSET: ", result)
 	}
-	if code, result, finished := handleInputLine(&session, "VRFY"); code != 500 || !strings.HasPrefix(result, "VRFY not supported") || finished {
+	if code, result, finished := handler.HandleInputLine(&session, "VRFY"); code != 500 || !strings.HasPrefix(result, "VRFY not supported") || finished {
 		t.Error("Invalid response to VRFY: ", result)
 	}
-	if code, result, finished := handleInputLine(&session, "MAIL FROM:<test@example.com>"); code != 250 || !strings.HasPrefix(result, "OK") || finished {
+	if code, result, finished := handler.HandleInputLine(&session, "MAIL FROM:<test@example.com>"); code != 250 || !strings.HasPrefix(result, "OK") || finished {
 		t.Error("Invalid response to MAIL FROM: ", code, result, finished)
 	}
-	if code, result, finished := handleInputLine(&session, "QUIT"); code != 221 || strings.HasPrefix(result, " goodbye") || !finished {
+	if code, result, finished := handler.HandleInputLine(&session, "QUIT"); code != 221 || strings.HasPrefix(result, " goodbye") || !finished {
 		t.Error("Invalid response to QUIT: ", result)
 	}
 }
