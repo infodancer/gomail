@@ -25,7 +25,7 @@ type Envelope struct {
 	EnvelopePath string
 	Sender       string
 	From         string
-	Recipients   []EnvelopeRecipient
+	Recipients   []string
 }
 
 // EnvelopeRecipient tracks recipients and delivery status
@@ -78,7 +78,11 @@ func CreateQueue(path string) (*Queue, error) {
 }
 
 // Enqueue places a message into the queue
-func (q Queue) Enqueue(env Envelope, msg string) error {
+func (q *Queue) Enqueue(sender string, recipients []string, msg []byte) error {
+	env := Envelope{
+		Sender:     sender,
+		Recipients: recipients,
+	}
 	name := createUniqueName()
 	envFile := filepath.Join(q.Directory, "env", name+".env")
 	msgFile := filepath.Join(q.Directory, "msg", name+".msg")
@@ -101,7 +105,7 @@ func (q Queue) Enqueue(env Envelope, msg string) error {
 		return errors.New("could not write envelope to file")
 	}
 
-	err = ioutil.WriteFile(msgFile, []byte(msg), 0644)
+	err = ioutil.WriteFile(msgFile, msg, 0644)
 	if err != nil {
 		return errors.New("could not write message to file")
 	}

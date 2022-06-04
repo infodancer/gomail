@@ -19,3 +19,51 @@ func TestCreateAddress(t *testing.T) {
 		t.Error("Could not create address from ", addr1, err)
 	}
 }
+
+func TestGetUser(t *testing.T) {
+	if GetUser("test@example.com") != "test" {
+		t.Error("expected \"test\"")
+	}
+	if GetUser("test-folder@example.com") != "test" {
+		t.Error("expected \"test\"")
+	}
+	if GetUser("test") != "test" {
+		t.Error("expected \"test\"")
+	}
+	if GetUser("test@") != "test" {
+		t.Error("expected \"test\"")
+	}
+}
+
+func TestGetHost(t *testing.T) {
+	if GetHost("test@example.com") != "example" {
+		t.Error("expected \"example\"")
+	}
+	if GetHost("test-folder@example.com") != "example" {
+		t.Error("expected \"example\"")
+	}
+	if GetHost("test") != "" {
+		t.Error("expected \"\"")
+	}
+	if GetHost("test@") != "" {
+		t.Error("expected \"\"")
+	}
+}
+
+func TestGetFolder(t *testing.T) {
+	if GetFolder("test@example.com") != "" {
+		t.Error("expected \"\"")
+	}
+	if GetFolder("test-folder@example.com") != "folder" {
+		t.Error("expected \"folder\"")
+	}
+	if GetFolder("test-folder") != "folder" {
+		t.Error("expected \"folder\"")
+	}
+	if GetFolder("test") != "" {
+		t.Error("expected \"\"")
+	}
+	if GetFolder("test@") != "" {
+		t.Error("expected \"\"")
+	}
+}

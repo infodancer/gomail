@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"infodancer.org/gomail/smtp"
+	"github.com/infodancer/gomail/smtp"
 )
 
 var logger *log.Logger

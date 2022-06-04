@@ -1,16 +1,15 @@
-package connection
+package connect
 
 import (
 	"bufio"
 	"os"
 )
 
-// This type holds information about a tcp connection
-type Connection interface {
+// TCPConnection holds information about a tcp connection
+type TCPConnection interface {
 	ReadLine() (string, error)
-	WriteLine(s string) error
+	WriteLine(string) error
 	Close() error
-
 	GetProto() string
 	GetTCPLocalIP() string
 	GetTCPLocalPort() string
@@ -23,6 +22,13 @@ type Connection interface {
 // StandardIOConnection expects stdin, stdout, and TCP info in the environment
 type StandardIOConnection struct {
 	rw *bufio.ReadWriter
+}
+
+func NewStandardIOConnection(r *bufio.Reader, w *bufio.Writer) (TCPConnection, error) {
+	stdcon := StandardIOConnection{
+		rw: bufio.NewReadWriter(r, w),
+	}
+	return stdcon, nil
 }
 
 // Close currently just flushes the buffers...
@@ -43,6 +49,7 @@ func (c StandardIOConnection) ReadLine() (string, error) {
 	return s, nil
 }
 
+// WriteLine automatically appends a linefeed character
 func (c StandardIOConnection) WriteLine(s string) error {
 	_, err := c.rw.WriteString(s + `\n`)
 	return err

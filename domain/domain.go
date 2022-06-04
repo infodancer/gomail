@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"infodancer.org/gomail/maildir"
+	"github.com/infodancer/gomail/maildir"
 )
 
 // Domain holds information about a domain
@@ -76,7 +76,7 @@ func (domain *Domain) GetUserMaildir(name string) (*maildir.Maildir, error) {
 		return nil, err
 	}
 	logger.Println("Checking for maildir at " + user.MaildirPath)
-	result, err := maildir.GetMaildir(user.MaildirPath)
+	result, err := maildir.New(user.MaildirPath)
 	if err != nil {
 		err := fmt.Errorf("could not load maildir from %v: %v", user.MaildirPath, err)
 		return nil, err

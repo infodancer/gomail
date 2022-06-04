@@ -17,19 +17,45 @@ type Address struct {
 	Folder *string
 }
 
-// ToString produces a string version of the parsed address
-func (address Address) ToString() (string, error) {
-	if address.User != nil {
-		result := *address.User
-		if address.Folder != nil {
-			result = result + "-" + *address.Folder
+func Parse(input string) (user string, folder string, host string) {
+	if sep1 := strings.Index(input, "@"); sep1 != -1 {
+		user = input[0:sep1]
+		host = input[sep1+1:]
+		if sep2 := strings.Index(user, "-"); sep2 != -1 {
+			user = user[0:sep2]
+			folder = user[sep2:]
 		}
-		if address.Domain != nil {
-			result = result + "@" + *address.Domain
-		}
-		return result, nil
+	} else {
+		user = input
 	}
-	return "", errors.New("invalid address; user component is required")
+	return
+}
+
+func GetUser(s string) string {
+	user, _, _ := Parse(s)
+	return user
+}
+
+func GetFolder(s string) string {
+	_, folder, _ := Parse(s)
+	return folder
+}
+
+func GetHost(s string) string {
+	_, _, host := Parse(s)
+	return host
+}
+
+// String produces a string version of the parsed address
+func (address Address) String() string {
+	result := *address.User
+	if address.Folder != nil {
+		result = result + "-" + *address.Folder
+	}
+	if address.Domain != nil {
+		result = result + "@" + *address.Domain
+	}
+	return result
 }
 
 // CreateAddress creates an address structure from an input user@host
@@ -37,10 +63,10 @@ func CreateAddress(input string) (*Address, error) {
 	result := Address{}
 	if sep1 := strings.Index(input, "@"); sep1 != -1 {
 		user := input[0:sep1]
-		host := input[sep1+1 : len(input)]
+		host := input[sep1+1:]
 		if sep2 := strings.Index(user, "-"); sep2 != -1 {
 			user = user[0:sep2]
-			folder := user[sep2:len(user)]
+			folder := user[sep2:]
 			result.Folder = &folder
 		}
 		result.User = &user

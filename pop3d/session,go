@@ -1,0 +1,48 @@
+package pop3d
+
+// Session describes the current session
+type Session struct {
+	// Config holds the server configuration
+	Config Config
+	// Connection holds the client connection information
+	Conn connect.TCPConnection
+	// Log holds the logger for this session
+	Log log.Logger
+
+	// State holds the state of the session
+	State int
+}
+
+type SessionState int
+
+const (
+	STATE_AUTHORIZATION SessionState = iota + 1
+	STATE_TRANSACTION
+	STATE_UPDATE
+)
+
+func (s Session) HandleConnection() error {
+	for {
+		line, err := s.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			s.Log.Println("io error reading from connection")
+		}
+		s.HandleInputLine(line)
+	}
+	return nil
+}
+
+// SendLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
+func (s Session) SendLine(line string) error {
+	cline := fmt.Sprintf("%s", line)
+	s.Log.Println("S:" + cline)
+	return s.Conn.WriteLine(cline)
+}
+
+// ReadLine reads a line
+func (s Session) ReadLine() (string, error) {
+	return s.Conn.ReadLine()
+}
