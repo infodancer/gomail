@@ -1,1 +1,3 @@
-CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gomail .
+#!/bin/sh
+go build -o bin/smtpd cmd/smtpd/smtpd.go
+go build -o bin/pop3d cmd/pop3d/pop3d.go

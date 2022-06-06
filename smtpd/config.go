@@ -1,4 +1,4 @@
-package main
+package smtpd
 
 import (
 	"github.com/infodancer/gomail/connect"
@@ -9,7 +9,7 @@ type Config struct {
 	ServerName string
 	Banner     string
 	Spamc      string
-	maxsize    int64
+	Maxsize    int64
 	MQueue     *queue.Queue
 }
 

@@ -17,6 +17,8 @@ type TCPConnection interface {
 	GetTCPRemotePort() string
 	GetTCPRemoteIP() string
 	GetTCPRemoteHost() string
+	// IsSecure returns true if the connection is encrypted
+	IsEncrypted() bool
 }
 
 // StandardIOConnection expects stdin, stdout, and TCP info in the environment
@@ -35,6 +37,12 @@ func NewStandardIOConnection(r *bufio.Reader, w *bufio.Writer) (TCPConnection, e
 func (c StandardIOConnection) Close() error {
 	c.rw.Flush()
 	return nil
+}
+
+// IsEncrypted indicates whethe the connection is encrypted (but not authenticated)
+// Stubbed for now
+func (c StandardIOConnection) IsEncrypted() bool {
+	return true
 }
 
 func (c StandardIOConnection) ReadLine() (string, error) {

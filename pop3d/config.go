@@ -1,8 +1,7 @@
-package main
+package pop3d
 
 import (
 	"github.com/infodancer/gomail/connect"
-	"github.com/infodancer/gomail/pop3d"
 )
 
 type Config struct {
@@ -10,8 +9,8 @@ type Config struct {
 }
 
 // Start sends the banner for new connections
-func (cfg *Config) Start(c *connect.TCPConnection) (*pop3d.Session, error) {
-	s := pop3d.Session{}
+func (cfg *Config) Start(c *connect.TCPConnection) (*Session, error) {
+	s := Session{}
 	err := s.SendLine("+OK " + cfg.ServerName + " POP3 server ready")
 	if err != nil {
 		return nil, err

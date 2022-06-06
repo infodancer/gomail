@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/infodancer/gomail/connect"
+	"github.com/infodancer/gomail/pop3d"
 )
 
 var logger *log.Logger
@@ -13,7 +14,7 @@ var logger *log.Logger
 func main() {
 	logger = log.New(os.Stderr, "", 0)
 
-	cfg := Config{
+	cfg := pop3d.Config{
 		ServerName: "",
 	}
 
@@ -25,7 +26,8 @@ func main() {
 		logger.Println("error creating new StandardIOConnection")
 		os.Exit(1)
 	}
-	s, err := cfg.Start(&c)
+	var s *pop3d.Session
+	s, err = cfg.Start(&c)
 	if err != nil {
 		logger.Println("error sending greeting")
 		os.Exit(2)
