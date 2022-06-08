@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"log"
 	"os"
 
@@ -18,10 +17,8 @@ func main() {
 		ServerName: "",
 	}
 
-	r := bufio.NewReader(os.Stdin)
-	w := bufio.NewWriter(os.Stdout)
 	var c connect.TCPConnection
-	c, err := connect.NewStandardIOConnection(r, w)
+	c, err := connect.NewStandardIOConnection()
 	if err != nil {
 		logger.Println("error creating new StandardIOConnection")
 		os.Exit(1)

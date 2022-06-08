@@ -14,8 +14,11 @@ type Config struct {
 }
 
 // Connection accepts a connection and sends the configured banner
-func (cfg *Config) Start(c *connect.TCPConnection) (*Session, error) {
-	s := Session{}
+func (cfg *Config) Start(c connect.TCPConnection) (*Session, error) {
+	s := Session{
+		Conn:   c,
+		Logger: c.Logger(),
+	}
 	err := s.SendCodeLine(220, cfg.ServerName+" "+cfg.Banner)
 	if err != nil {
 		return nil, err

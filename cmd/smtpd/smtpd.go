@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"log"
 	"os"
@@ -27,15 +26,13 @@ func main() {
 		MQueue:     &queue.Queue{},
 	}
 
-	r := bufio.NewReader(os.Stdin)
-	w := bufio.NewWriter(os.Stdout)
 	var c connect.TCPConnection
-	c, err := connect.NewStandardIOConnection(r, w)
+	c, err := connect.NewStandardIOConnection()
 	if err != nil {
 		logger.Println("error creating new StandardIOConnection")
 		os.Exit(1)
 	}
-	s, err := cfg.Start(&c)
+	s, err := cfg.Start(c)
 	if err != nil {
 		logger.Println("error sending greeting")
 		os.Exit(2)
