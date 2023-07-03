@@ -1,69 +1,39 @@
 package address
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 // TestCreateAddress
 func TestCreateAddress(t *testing.T) {
 	addr1 := "test@example.com"
-	if addr, err := CreateAddress(addr1); err == nil {
-		if *addr.Domain != "example.com" {
-			t.Error("domain was not example.com:", addr1)
-		}
-		if *addr.User != "test" {
-			t.Error("user was not test: ", addr1)
-		}
-		if addr.Folder != nil {
-			t.Error("folder was returned when not present", addr1)
-		}
-	} else {
-		t.Error("Could not create address from ", addr1, err)
-	}
+	addr, err := CreateAddress(addr1)
+	assert.NoError(t, err)
+	assert.Equal(t, "example.com", addr.Domain)
+	assert.Equal(t, "test", addr.User)
+	assert.Equal(t, "", addr.Folder)
 }
 
 func TestGetUser(t *testing.T) {
-	if GetUser("test@example.com") != "test" {
-		t.Error("expected \"test\"")
-	}
-	if GetUser("test-folder@example.com") != "test" {
-		t.Error("expected \"test\"")
-	}
-	if GetUser("test") != "test" {
-		t.Error("expected \"test\"")
-	}
-	if GetUser("test@") != "test" {
-		t.Error("expected \"test\"")
-	}
+	assert.Equal(t, "test", GetUser("test@example.com"))
+	assert.Equal(t, "test", GetUser("test-folder@example.com"))
+	assert.Equal(t, "test", GetUser("test"))
+	assert.Equal(t, "test", GetUser("test@"))
 }
 
 func TestGetHost(t *testing.T) {
-	if GetHost("test@example.com") != "example" {
-		t.Error("expected \"example\"")
-	}
-	if GetHost("test-folder@example.com") != "example" {
-		t.Error("expected \"example\"")
-	}
-	if GetHost("test") != "" {
-		t.Error("expected \"\"")
-	}
-	if GetHost("test@") != "" {
-		t.Error("expected \"\"")
-	}
+	assert.Equal(t, "example.com", GetHost("test@example.com"))
+	assert.Equal(t, "example.com", GetHost("test-folder@example.com"))
+	assert.Equal(t, "", GetHost("test"))
+	assert.Equal(t, "", GetHost("test@"))
 }
 
 func TestGetFolder(t *testing.T) {
-	if GetFolder("test@example.com") != "" {
-		t.Error("expected \"\"")
-	}
-	if GetFolder("test-folder@example.com") != "folder" {
-		t.Error("expected \"folder\"")
-	}
-	if GetFolder("test-folder") != "folder" {
-		t.Error("expected \"folder\"")
-	}
-	if GetFolder("test") != "" {
-		t.Error("expected \"\"")
-	}
-	if GetFolder("test@") != "" {
-		t.Error("expected \"\"")
-	}
+	assert.Equal(t, "", GetFolder("test@example.com"))
+	assert.Equal(t, "folder", GetFolder("test-folder@example.com"))
+	assert.Equal(t, "folder", GetFolder("test-folder"))
+	assert.Equal(t, "", GetFolder("test"))
+	assert.Equal(t, "", GetFolder("test@"))
 }

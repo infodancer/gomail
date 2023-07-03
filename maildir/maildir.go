@@ -26,19 +26,19 @@ type Maildir struct {
 // Create creates a maildir directory structure
 func Create(path string) (*Maildir, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.Mkdir(path, os.FileMode(0600)); err != nil {
+		if err := os.MkdirAll(path, os.FileMode(0755)); err != nil {
 			return nil, err
 		}
 		curDir := filepath.Join(path, "cur")
-		if err := os.Mkdir(curDir, os.FileMode(0600)); err != nil {
+		if err := os.MkdirAll(curDir, os.FileMode(0755)); err != nil {
 			return nil, err
 		}
 		tmpDir := filepath.Join(path, "tmp")
-		if err := os.Mkdir(tmpDir, os.FileMode(0600)); err != nil {
+		if err := os.MkdirAll(tmpDir, os.FileMode(0755)); err != nil {
 			return nil, err
 		}
 		newDir := filepath.Join(path, "new")
-		if err := os.Mkdir(newDir, os.FileMode(0600)); err != nil {
+		if err := os.MkdirAll(newDir, os.FileMode(0755)); err != nil {
 			return nil, err
 		}
 		return New(path)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -23,8 +24,6 @@ type Session struct {
 	Config Config
 	// Connection holds the client connection information
 	Conn connect.TCPConnection
-	// Log holds the s.Logger for this session
-	Logger log.Logger
 	// Sender is the authenticated user sending the message; nil if not authenticated
 	Sender string
 	// From is the claimed sender of the message
@@ -42,7 +41,23 @@ type Session struct {
 	maxsize int64
 }
 
-func (s Session) HandleConnection() error {
+func Create(cfg Config, conn connect.TCPConnection) *Session {
+	s := Session{Config: cfg, Conn: conn}
+
+	return &s
+}
+
+func (s *Session) Printf(v ...any) error {
+	_, err := fmt.Fprintf(os.Stderr, v[0].(string), v[1:])
+	return err
+}
+
+func (s *Session) Println(v ...any) error {
+	_, err := fmt.Fprintln(os.Stderr, v...)
+	return err
+}
+
+func (s *Session) HandleConnection() error {
 	defer s.Conn.Close()
 	for {
 		line, err := s.ReadLine()
@@ -50,7 +65,7 @@ func (s Session) HandleConnection() error {
 			if err == io.EOF {
 				break
 			}
-			s.Logger.Println("io error reading from connection")
+			s.Println("io error reading from connection")
 		}
 		s.HandleInputLine(line)
 	}
@@ -58,25 +73,25 @@ func (s Session) HandleConnection() error {
 }
 
 // SendCodeLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
-func (s Session) SendCodeLine(code int, line string) error {
+func (s *Session) SendCodeLine(code int, line string) error {
 	cline := fmt.Sprintf("%d %s\r\n", code, line)
-	s.Logger.Println("S:" + cline)
+	s.Println("S:" + cline)
 	return s.Conn.WriteLine(cline)
 }
 
 // SendLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
-func (s Session) SendLine(line string) error {
-	s.Logger.Println("S:" + line)
+func (s *Session) SendLine(line string) error {
+	s.Println("S:" + line)
 	return s.Conn.WriteLine(line)
 }
 
 // ReadLine reads a line
-func (s Session) ReadLine() (string, error) {
+func (s *Session) ReadLine() (string, error) {
 	return s.Conn.ReadLine()
 }
 
 // HandleInputLine accepts a line and handles it
-func (s Session) HandleInputLine(line string) (int, string, bool) {
+func (s *Session) HandleInputLine(line string) (int, string, bool) {
 	cmd := strings.Split(line, " ")
 	command := strings.ToUpper(strings.TrimSpace(cmd[0]))
 	switch command {
@@ -120,22 +135,22 @@ func (s Session) HandleInputLine(line string) (int, string, bool) {
 }
 
 // processHELO handles the standard SMTP helo
-func (s Session) processHELO(line string) (int, string, bool) {
+func (s *Session) processHELO(line string) (int, string, bool) {
 	return 250, s.Config.ServerName, false
 }
 
 // processEHLO handles the extended EHLO command, but the extensions are listed elsewhere
-func (s Session) processEHLO(line string) (int, string, bool) {
+func (s *Session) processEHLO(line string) (int, string, bool) {
 	return 250, s.Config.ServerName, false
 }
 
 // processQUIT simply terminates the session
-func (s Session) processQUIT(line string) (int, string, bool) {
+func (s *Session) processQUIT(line string) (int, string, bool) {
 	return 221, "goodbye", true
 }
 
 // processRSET clears the session information
-func (s Session) processRSET(line string) (int, string, bool) {
+func (s *Session) processRSET(line string) (int, string, bool) {
 	s.Sender = ""
 	s.From = ""
 	s.Recipients = make([]string, 0)
@@ -143,16 +158,16 @@ func (s Session) processRSET(line string) (int, string, bool) {
 	return 250, "OK", false
 }
 
-func (s Session) processNOOP(line string) (int, string, bool) {
+func (s *Session) processNOOP(line string) (int, string, bool) {
 	return 250, "OK", false
 }
 
-func (s Session) processVRFY(line string) (int, string, bool) {
+func (s *Session) processVRFY(line string) (int, string, bool) {
 	return 500, "VRFY not supported", false
 }
 
 // processAUTH handles the auth process
-func (s Session) processAUTH(line string) (int, string, bool) {
+func (s *Session) processAUTH(line string) (int, string, bool) {
 	// For now, we haven't implemented this
 	if strings.HasPrefix(line, "AUTH ") {
 		authType := line[5:]
@@ -184,7 +199,7 @@ func validateCramMD5(resp string, password string) bool {
 	return false
 }
 
-func (s Session) processRCPT(line string) (int, string, bool) {
+func (s *Session) processRCPT(line string) (int, string, bool) {
 	addr, err := extractAddressPart(line)
 	if err != nil {
 		return 550, "Invalid address", false
@@ -195,29 +210,31 @@ func (s Session) processRCPT(line string) (int, string, bool) {
 	}
 	// Check for number of recipients
 	if len(s.Recipients) >= s.RecipientLimit {
-		s.Logger.Printf("Rejecting RCPT TO %d recipients already", len(s.Recipients))
+		s.Printf("Rejecting RCPT TO %d recipients already", len(s.Recipients))
 		return 452, "Too many recipients", false
 	}
 	// Check if this is being sent to a bounce address
 	if len(*addr) == 0 {
-		s.Logger.Println("Rejecting RCPT TO to bounce address: " + *addr)
+		s.Println("Rejecting RCPT TO to bounce address: " + *addr)
 		return 503, "We don't accept mail to that address", false
 	}
 
 	// Before we actually do filesystem operations, sanitize the input
-	if isSuspiciousAddress(*addr) {
-		s.Logger.Println("Rejecting suspicious RCPT TO: " + *addr)
+	if IsSuspiciousAddress(*addr) {
+		s.Println("Rejecting suspicious RCPT TO: " + *addr)
 		return 550, "Invalid address", false
 	}
 
 	recipient, err := address.CreateAddress(*addr)
 	if err != nil {
-		s.Logger.Println("CreateAddress failed: " + *addr)
 		return 550, "Invalid address", false
 	}
 
 	// Check for relay and allow only if sender has authenticated
-	dom, err := domain.GetDomain(*recipient.Domain)
+	dom, err := domain.GetDomain(recipient.Domain)
+	if err != nil {
+		return 550, "Invalid address", false
+	}
 	if len(s.Sender) == 0 {
 		// Only bother to check domain if the sender is nil
 		if dom == nil {
@@ -228,10 +245,10 @@ func (s Session) processRCPT(line string) (int, string, bool) {
 	// Check for local recipient existing if the domain is local
 	if dom != nil {
 		// We know the domain exists locally now
-		user, err := dom.GetUser(*recipient.User)
+		user, err := dom.GetUser(recipient.User)
 		// Temporary error if we couldn't access the user for some reason
 		if err != nil {
-			s.Logger.Println("Error from GetUser: ", err)
+			s.Println("Error from GetUser: ", err)
 			return 451, "Address does not exist or cannot receive mail at this time, try again later", false
 		}
 		// If we got back nil without error, they really don't exist
@@ -239,25 +256,25 @@ func (s Session) processRCPT(line string) (int, string, bool) {
 			return 550, "User does not exist", false
 		}
 		// But if they do exist, check that their mailbox also exists
-		maildir, err := dom.GetUserMaildir(*recipient.User)
+		maildir, err := dom.GetUserMaildir(recipient.User)
 		if err != nil {
-			s.Logger.Println("User exists but GetUserMaildir errors: ", err)
+			s.Println("User exists but GetUserMaildir errors: ", err)
 			return 451, "Address does not exist or cannot receive mail at this time, try again later", false
 		}
 		// If we got back nil without error, the maildir doesn't exist, but this is a temporary (hopefully) setup problem
 		if maildir == nil {
-			s.Logger.Println("User exists but maildir is nil: ", err)
+			s.Println("User exists but maildir is nil: ", err)
 			return 451, "Maildir does not exist; try again later", false
 		}
 	}
 
 	// At this point, we are willing to accept this recipient
 	s.Recipients = append(s.Recipients, recipient.String())
-	s.Logger.Println("Recipient accepted: ", *addr)
+	s.Println("Recipient accepted: ", *addr)
 	return 250, "OK", false
 }
 
-func (s Session) processMAIL(line string) (int, string, bool) {
+func (s *Session) processMAIL(line string) (int, string, bool) {
 	if len(s.From) > 0 {
 		return 400, "MAIL FROM already sent", false
 	}
@@ -274,7 +291,7 @@ func (s Session) processMAIL(line string) (int, string, bool) {
 	return 250, "OK", false
 }
 
-func (s Session) processDATA(line string) (int, string, bool) {
+func (s *Session) processDATA(line string) (int, string, bool) {
 	// Did the user specify an envelope?
 	// Check if the sender has been set
 	if len(s.From) == 0 {
@@ -298,7 +315,7 @@ func (s Session) processDATA(line string) (int, string, bool) {
 		if err != nil {
 			break
 		}
-		s.Logger.Printf(">%v\n", line)
+		s.Printf(">%v\n", line)
 		if strings.HasPrefix(line, ".") {
 			if strings.HasPrefix(line, "..") {
 				// Remove escaped period character
@@ -306,8 +323,8 @@ func (s Session) processDATA(line string) (int, string, bool) {
 			} else {
 				// Check with spamc if needed
 				if len(s.Config.Spamc) > 0 {
-					s.Logger.Printf("session.Data is %v bytes", len(s.Data))
-					s.Logger.Printf("session.Data:\n%v", s.Data)
+					s.Printf("session.Data is %v bytes", len(s.Data))
+					s.Printf("session.Data:\n%v", s.Data)
 					msg, err := s.checkSpam()
 					if err != nil {
 						// Temporary failure if we can't check it
@@ -318,22 +335,22 @@ func (s Session) processDATA(line string) (int, string, bool) {
 				}
 				err := s.enqueue()
 				if err != nil {
-					s.Logger.Println("Unable to enqueue message!")
+					s.Println("Unable to enqueue message!")
 					return 451, "message could not be accepted at this time, try again later", false
 				}
 				return 250, "message accepted for delivery", false
 			}
 		}
-		s.Logger.Printf("Appended %v bytes to existing %v bytes in session.Data", len(line), len(s.Data))
+		s.Printf("Appended %v bytes to existing %v bytes in session.Data", len(line), len(s.Data))
 		s.Data += line
 		s.Data += "\n"
-		s.Logger.Printf("New session.Data is %v bytes", len(s.Data))
+		s.Printf("New session.Data is %v bytes", len(s.Data))
 	}
 	// If we somehow get here without the message being completed, return a temporary failure
 	return 451, "message could not be accepted at this time, try again later", false
 }
 
-func (s Session) createReceived() (string, error) {
+func (s *Session) createReceived() (string, error) {
 	rcv := "Received: from "
 	// remote server info
 	rcv += s.Conn.GetTCPRemoteIP()
@@ -344,12 +361,12 @@ func (s Session) createReceived() (string, error) {
 	return rcv, nil
 }
 
-func (s Session) AddHeader(h string) {
+func (s *Session) AddHeader(h string) {
 	s.Headers = append(s.Headers, h)
 }
 
 // enqueue places the current message (as contained in the session) into the disk queue; ie accepting delivery
-func (s Session) enqueue() error {
+func (s *Session) enqueue() error {
 	err := s.Config.MQueue.Enqueue(s.From, s.Recipients, []byte(s.Data))
 	if err != nil {
 		log.Fatal(err)
@@ -359,7 +376,7 @@ func (s Session) enqueue() error {
 }
 
 // CheckSpam runs spamc to see if a message is spam, and returns either an error, or the modified message
-func (s Session) checkSpam() (string, error) {
+func (s *Session) checkSpam() (string, error) {
 	if len(s.Config.Spamc) > 0 {
 		cmd := exec.Command(s.Config.Spamc)
 		stdin, err := cmd.StdinPipe()
@@ -371,12 +388,12 @@ func (s Session) checkSpam() (string, error) {
 			log.Fatal(err)
 		}
 
-		s.Logger.Printf("Executing spamc: %v", s.Config.Spamc)
+		s.Printf("Executing spamc: %v", s.Config.Spamc)
 		if err := cmd.Start(); err != nil {
 			log.Fatal(err)
 		}
 
-		s.Logger.Printf("Beginning output processing: %v", s.Config.Spamc)
+		s.Printf("Beginning output processing: %v", s.Config.Spamc)
 		result := ""
 
 		// Create reader and writer
@@ -387,19 +404,22 @@ func (s Session) checkSpam() (string, error) {
 
 		// Write and flush
 		l, err := spamwriter.WriteString(s.Data)
-		s.Logger.Printf("Wrote %v bytes of %v to spamwriter", l, len(s.Data))
+		if err != nil {
+			log.Fatal(err)
+		}
+		s.Printf("Wrote %v bytes of %v to spamwriter", l, len(s.Data))
 		spamwriter.Flush()
 		stdin.Close()
-		s.Logger.Printf("Message written to spamc")
+		s.Printf("Message written to spamc")
 
 		// Create a reader at least as big as the original message with extra space for headers
 
-		s.Logger.Printf("Reading message back from spamc")
+		s.Printf("Reading message back from spamc")
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text()
-			s.Logger.Println(line)
+			s.Println(line)
 			result += line
 			result += "\n"
 		}
@@ -408,7 +428,7 @@ func (s Session) checkSpam() (string, error) {
 			log.Fatal(err)
 		}
 
-		s.Logger.Printf("Waiting for spamc to exit")
+		s.Printf("Waiting for spamc to exit")
 		err = cmd.Wait()
 		if err != nil {
 			log.Fatal(err)
@@ -416,7 +436,7 @@ func (s Session) checkSpam() (string, error) {
 		}
 		return result, nil
 	}
-	s.Logger.Printf("spamc not configured!")
+	s.Printf("spamc not configured!")
 	return s.Data, nil
 }
 
@@ -425,12 +445,12 @@ func extractAddressPart(line string) (*string, error) {
 	begin := strings.Index(line, "<") + 1
 	end := strings.LastIndex(line, ">")
 	if begin == -1 || end == -1 {
-		return nil, errors.New("Address not found in command")
+		return nil, errors.New("address not found in command")
 	}
 	value := line[begin:end]
 	// RFC 5321 https://tools.ietf.org/html/rfc5321#section-4.5.3
 	if len(value) > 254 {
-		return nil, errors.New("Address exceeds maximum length of email address")
+		return nil, errors.New("address exceeds maximum length of email address")
 	}
 	return &value, nil
 }
@@ -439,9 +459,9 @@ func extractAddressPart(line string) (*string, error) {
 func extractUsername(resp string) (string, error) {
 	decoded, err := base64.StdEncoding.DecodeString(resp)
 	if err != nil {
-		return "", errors.New("Base64 decode failed")
+		return "", errors.New("base64 decode failed")
 	}
-	// s.Logger.Println("CRAM-MD5 response: ", decoded)
+	// s.Println("CRAM-MD5 response: ", decoded)
 	return string(decoded), nil
 }
 
@@ -457,10 +477,10 @@ func createChallenge() string {
 	return encoded
 }
 
-// isSuspiciousInput looks for input that contains filename elements
+// IsSuspiciousInput looks for input that contains filename elements
 // This method should be used to check addresses or domain names coming from external sources
 // It's not perfect, but it works for now
-func isSuspiciousAddress(input string) bool {
+func IsSuspiciousAddress(input string) bool {
 	// isSafe := regexp.MustCompile(`^[A-Za-z]+@[A-Za-z]+$`).MatchString
 	i := strings.Index(input, "..")
 	if i == -1 {

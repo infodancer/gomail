@@ -5,6 +5,8 @@ import (
 	"path"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMaildir(t *testing.T) {
@@ -12,9 +14,7 @@ func TestMaildir(t *testing.T) {
 	tmpdir := os.TempDir()
 	tmpname := createUniqueName()
 	md, err := Create(path.Join(tmpdir, tmpname))
-	if err != nil {
-		t.Fatal("error creating maildir")
-	}
+	assert.NoError(t, err, "error creating maildir: %w", err)
 
 	msgs, err := md.List()
 	if err != nil {

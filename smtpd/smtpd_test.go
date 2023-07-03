@@ -22,20 +22,20 @@ func TestIsSuspiciousAddress(t *testing.T) {
 	example1 := "test@example.com"
 	example2 := "test-folder@example.com"
 	example3 := "../../../test@example.com"
-	if isSuspiciousAddress(example1) {
+	if IsSuspiciousAddress(example1) {
 		t.Error("IsSuspiciousAddress reported valid address as suspicious: ", example1)
 	}
-	if isSuspiciousAddress(example2) {
+	if IsSuspiciousAddress(example2) {
 		t.Error("IsSuspiciousAddress reported valid address as suspicious: ", example2)
 	}
-	if !isSuspiciousAddress(example3) {
+	if !IsSuspiciousAddress(example3) {
 		t.Error("IsSuspiciousAddress reported suspicious address as valid: ", example3)
 	}
 
 }
 
 func TestHandleInputLine(t *testing.T) {
-	s := Session{}
+	s := &Session{}
 
 	if code, result, finished := s.HandleInputLine("HELO hi"); code != 250 || !strings.HasSuffix(result, "Hello") || finished {
 		t.Error("Invalid response to HELO: ", result)

@@ -1,32 +1,31 @@
 package queue
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateQueue(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "queue")
-	if err != nil {
-		t.Fatalf("failed to create temporary directory: %v", err)
-	}
+	assert.NoError(t, err, "failed to create temporary directory: %w", err)
 	q, err := CreateQueue(tempDir)
-	if err != nil {
-		t.Fatalf("failed to create queue directory: %v", err)
-	}
+	assert.NoError(t, err, "failed to create queue directory: %w", err)
 
 	if fileExists(tempDir) {
 		msgf := filepath.Join(tempDir, "msg")
 		if !fileExists(msgf) {
 			t.Fatalf("queue msg directory not created!")
 		}
-		envf := filepath.Join(tempDir, "envf")
+		envf := filepath.Join(tempDir, "env")
 		if !fileExists(envf) {
 			t.Fatalf("queue env directory not created!")
 		}
-		tmpf := filepath.Join(tempDir, "tmpf")
+		tmpf := filepath.Join(tempDir, "tmp")
 		if !fileExists(tmpf) {
 			t.Fatalf("queue tmp directory not created!")
 		}
@@ -54,9 +53,12 @@ func TestEnqueue(t *testing.T) {
 }
 
 func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
+	_, err := os.Stat(filename)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false
+		}
 		return false
 	}
-	return !info.IsDir()
+	return true
 }

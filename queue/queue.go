@@ -56,25 +56,36 @@ func GetQueue(directory string) (*Queue, error) {
 
 // CreateQueue creates a queue directory structure at the provided location
 func CreateQueue(path string) (*Queue, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.Mkdir(path, os.ModePerm); err != nil {
-			return nil, err
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(path, 0755)
+			if err != nil {
+				return nil, err
+			}
+			_, err = os.Stat(path)
+			if err != nil {
+				return nil, err
+			}
 		}
-		curDir := filepath.Join(path, "msg")
-		if err := os.Mkdir(curDir, os.ModePerm); err != nil {
-			return nil, err
-		}
-		tmpDir := filepath.Join(path, "tmp")
-		if err := os.Mkdir(tmpDir, os.ModePerm); err != nil {
-			return nil, err
-		}
-		newDir := filepath.Join(path, "env")
-		if err := os.Mkdir(newDir, os.ModePerm); err != nil {
-			return nil, err
-		}
-		return GetQueue(path)
 	}
-	return nil, errors.New("queue path does not exist")
+	if !fi.IsDir() {
+		return nil, fmt.Errorf("%s already exists and is not a directory", path)
+	}
+	curDir := filepath.Join(path, "msg")
+	if err := os.MkdirAll(curDir, 0755); err != nil {
+		return nil, err
+	}
+	tmpDir := filepath.Join(path, "tmp")
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return nil, err
+	}
+	newDir := filepath.Join(path, "env")
+	if err := os.MkdirAll(newDir, 0755); err != nil {
+		return nil, err
+	}
+	return GetQueue(path)
 }
 
 // Enqueue places a message into the queue
@@ -119,6 +130,7 @@ func createUniqueName() string {
 	center := rand.Int63()
 	right, err := os.Hostname()
 	if err != nil {
+		right = "localhost"
 	}
 
 	result := fmt.Sprintf("%v.%v.%v", left, center, right)

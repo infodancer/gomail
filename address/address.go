@@ -10,23 +10,23 @@ import (
 // Address represents an internet email address user@host
 type Address struct {
 	// User represents the username
-	User *string
+	User string
 	// Host represnets the hostname
-	Domain *string
+	Domain string
 	// Folder represents the subfolder portion of the address separated by a -
-	Folder *string
+	Folder string
 }
 
 func Parse(input string) (user string, folder string, host string) {
 	if sep1 := strings.Index(input, "@"); sep1 != -1 {
 		user = input[0:sep1]
 		host = input[sep1+1:]
-		if sep2 := strings.Index(user, "-"); sep2 != -1 {
-			user = user[0:sep2]
-			folder = user[sep2:]
-		}
 	} else {
 		user = input
+	}
+	if sep2 := strings.Index(user, `-`); sep2 != -1 {
+		folder = user[sep2+1:]
+		user = user[0:sep2]
 	}
 	return
 }
@@ -48,12 +48,12 @@ func GetHost(s string) string {
 
 // String produces a string version of the parsed address
 func (address Address) String() string {
-	result := *address.User
-	if address.Folder != nil {
-		result = result + "-" + *address.Folder
+	result := address.User
+	if len(address.Folder) > 0 {
+		result = result + "-" + address.Folder
 	}
-	if address.Domain != nil {
-		result = result + "@" + *address.Domain
+	if len(address.Domain) > 0 {
+		result = result + "@" + address.Domain
 	}
 	return result
 }
@@ -67,10 +67,10 @@ func CreateAddress(input string) (*Address, error) {
 		if sep2 := strings.Index(user, "-"); sep2 != -1 {
 			user = user[0:sep2]
 			folder := user[sep2:]
-			result.Folder = &folder
+			result.Folder = folder
 		}
-		result.User = &user
-		result.Domain = &host
+		result.User = user
+		result.Domain = host
 		return &result, nil
 	}
 	return nil, errors.New("Address not found in command")
@@ -78,7 +78,7 @@ func CreateAddress(input string) (*Address, error) {
 
 // LookupMX returns the list of mxes for an address, sorted by priority
 func LookupMX(address *Address) ([]*net.MX, error) {
-	mxrecords, err := net.LookupMX(*address.Domain)
+	mxrecords, err := net.LookupMX(address.Domain)
 	if err != nil {
 
 		return nil, err
