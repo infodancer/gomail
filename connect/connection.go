@@ -65,15 +65,19 @@ func (c *StandardIOConnection) ReadLine() (string, error) {
 		return "", err
 	}
 	// Many early protocols specify CRLF, so for convenience...
-	if s[len(s)] == '\r' {
-		return s[0 : len(s)-1], nil
+	if s[len(s)-1] == '\r' {
+		return s[0 : len(s)-2], nil
 	}
 	return s, nil
 }
 
 // WriteLine automatically appends a linefeed character
 func (c *StandardIOConnection) WriteLine(s string) error {
-	_, err := c.rw.WriteString(s + `\n`)
+	_, err := c.rw.WriteString(s + "\n")
+	if err != nil {
+		return err
+	}
+	err = c.rw.Flush()
 	return err
 }
 
