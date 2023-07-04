@@ -1,0 +1,10 @@
+Package: gomail
+Version: 0.0.1
+Maintainer: Matthew <matthew@infodancer.org>
+Architecture: amd64
+Section: utils
+Priority: optional
+Depends: 
+Homepage: https://github.com/infodancer/gomail
+Description: Mail server tools
+ Gomail provides an experimental mail server, including daemons for SMTP and POP3.
