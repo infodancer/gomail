@@ -2,8 +2,9 @@ package pop3d
 
 import (
 	"errors"
+	"fmt"
 	"io"
-	"log"
+	"os"
 	"strings"
 
 	"github.com/infodancer/gomail/connect"
@@ -15,9 +16,6 @@ type Session struct {
 	Config Config
 	// Connection holds the client connection information
 	Conn connect.TCPConnection
-	// Log holds the logger for this session
-	Log log.Logger
-
 	// State holds the state of the session
 	State SessionState
 }
@@ -37,7 +35,7 @@ func (s Session) HandleConnection() error {
 			if err == io.EOF {
 				break
 			}
-			s.Log.Println("io error reading from connection")
+			s.Println("io error reading from connection")
 		}
 		s.HandleInputLine(line)
 	}
@@ -46,8 +44,18 @@ func (s Session) HandleConnection() error {
 
 // SendLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
 func (s Session) SendLine(line string) error {
-	s.Log.Println("S:" + line)
+	s.Println("S:" + line)
 	return s.Conn.WriteLine(line)
+}
+
+func (s *Session) Printf(v ...any) error {
+	_, err := fmt.Fprintf(os.Stderr, v[0].(string), v[1:])
+	return err
+}
+
+func (s *Session) Println(v ...any) error {
+	_, err := fmt.Fprintln(os.Stderr, v...)
+	return err
 }
 
 // ReadLine reads a line
