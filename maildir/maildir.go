@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -201,7 +200,7 @@ func (m *Maildir) List() ([]string, error) {
 
 // Scan checks a maildir for new messages, moving them to cur
 func (m *Maildir) Scan() error {
-	msgs, err := ioutil.ReadDir(path.Join(m.directory, "new"))
+	msgs, err := os.ReadDir(path.Join(m.directory, "new"))
 	if err != nil {
 		return err
 	}
