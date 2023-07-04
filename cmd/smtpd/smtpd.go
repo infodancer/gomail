@@ -2,38 +2,36 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/infodancer/gomail/connect"
-	"github.com/infodancer/gomail/queue"
 	"github.com/infodancer/gomail/smtpd"
 )
 
 func main() {
-	helo := flag.String("helo", "localhost", "The helo string to use when greeting clients")
-	cfg := smtpd.Config{
-		ServerName: "localhost",
-		Banner:     *helo,
-		Spamc:      "",
-		Maxsize:    0,
-		MQueue:     &queue.Queue{},
-	}
+	cfgfile := flag.String("cfg", "/opt/infodancer/gomail/etc/smtpd.json", "The configuration file")
+	flag.Parse()
 
-	var c connect.TCPConnection
-	c, err := connect.NewStandardIOConnection()
+	cfg, err := smtpd.ReadConfigFile(*cfgfile)
 	if err != nil {
-		fmt.Println("error creating new StandardIOConnection")
+		log.Println("error reading configuration: %w", err)
+		os.Exit(1)
+	}
+	var c connect.TCPConnection
+	c, err = connect.NewStandardIOConnection()
+	if err != nil {
+		log.Println("error creating new StandardIOConnection")
 		os.Exit(1)
 	}
 	s, err := cfg.Start(c)
 	if err != nil {
-		fmt.Println("error sending greeting")
+		log.Println("error sending greeting")
 		os.Exit(2)
 	}
 	err = s.HandleConnection()
 	if err != nil {
-		fmt.Println("error handling connection")
+		log.Println("error handling connection")
 		os.Exit(3)
 	}
 }
