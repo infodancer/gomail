@@ -1,0 +1,29 @@
+#!/bin/sh
+NAME="gomail"
+BUILD="build/gomail"
+VERSION="0.1"
+rm -rf ${BUILD}
+go build -o bin/smtpd cmd/smtpd/smtpd.go
+go build -o bin/pop3d cmd/pop3d/pop3d.go
+mkdir -p ${BUILD}/DEBIAN
+cp debian/DEBIAN/control ${BUILD}/DEBIAN
+cp debian/DEBIAN/conffiles ${BUILD}/DEBIAN
+mkdir -p ${BUILD}/usr/share/doc/${NAME}
+cp debian/changelog ${BUILD}/usr/share/doc/${NAME}
+cp debian/copyright ${BUILD}/usr/share/doc/${NAME}
+gzip --best ${BUILD}/usr/share/doc/${NAME}/changelog
+mkdir -p ${BUILD}/opt/infodancer/gomail/etc
+cp etc/smtpd.json ${BUILD}/opt/infodancer/gomail/etc
+cp etc/submissiond.json ${BUILD}/opt/infodancer/gomail/etc
+cp etc/pop3d.json ${BUILD}/opt/infodancer/gomail/etc
+mkdir -p ${BUILD}/opt/infodancer/gomail/domains
+mkdir -p ${BUILD}/opt/infodancer/gomail/bin
+cp bin/smtpd ${BUILD}/opt/infodancer/gomail/bin/smtpd
+cp bin/pop3d ${BUILD}/opt/infodancer/gomail/bin/pop3d
+strip ${BUILD}/opt/infodancer/gomail/bin/pop3d
+strip ${BUILD}/opt/infodancer/gomail/bin/smtpd
+cd build
+dpkg-deb --root-owner-group --build ${NAME}
+lintian --suppress-tags-from-file=../etc/lintian-suppressed ${NAME}.deb
+cd ..
+
