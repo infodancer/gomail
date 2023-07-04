@@ -1,6 +1,7 @@
 package maildir
 
 import (
+	"errors"
 	"os"
 	"path"
 	"strings"
@@ -11,18 +12,16 @@ import (
 
 func TestMaildir(t *testing.T) {
 	body := "Test message."
-	tmpdir := os.TempDir()
-	tmpname := createUniqueName()
-	md, err := Create(path.Join(tmpdir, tmpname))
+	tmpdir, err := os.MkdirTemp("", "maildir-test-")
+	assert.NoError(t, err, "error creating tmpdir")
+	defer os.RemoveAll(tmpdir)
+	md, err := Create(path.Join(tmpdir, "Maildir"))
 	assert.NoError(t, err, "error creating maildir: %w", err)
 
 	msgs, err := md.List()
-	if err != nil {
-		t.Fatal("error listing messages")
-	}
-	if len(msgs) > 0 {
-		t.Fatal("messages should be empty")
-	}
+	assert.NoError(t, err, "error listing empty maildir: %w", err)
+	assert.Equal(t, 0, len(msgs), "expected new maildir to be empty")
+
 	msgid, err := md.Add([]byte(body))
 	if err != nil {
 		t.Fatal("error writing message")
@@ -45,7 +44,21 @@ func TestMaildir(t *testing.T) {
 		}
 		strings.Contains(string(msg), body)
 	}
-	os.RemoveAll(path.Join(tmpdir, tmpname))
+	md.Delete()
+}
+
+func TestMaildirDelete(t *testing.T) {
+	tmpdir, err := os.MkdirTemp("", "maildir-test-")
+	assert.NoError(t, err, "error creating tmpdir")
+	defer os.RemoveAll(tmpdir)
+
+	md, err := Create(path.Join(tmpdir, "Maildir"))
+	assert.NoError(t, err, "error creating maildir: %w", err)
+	md.Delete()
+	_, err = os.Stat(md.directory)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("maildir delete failed to remove maildir")
+	}
 }
 
 func TestCreateUniqueName(t *testing.T) {

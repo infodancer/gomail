@@ -99,6 +99,11 @@ func createFilename(msgid string, flags []rune) string {
 	return filename
 }
 
+// Delete removes the maildir itself
+func (m *Maildir) Delete() error {
+	return os.RemoveAll(m.directory)
+}
+
 // Write replaces an existing message with new content
 func (m *Maildir) Write(msgid string, msg []byte) (string, error) {
 	name := createUniqueName()
