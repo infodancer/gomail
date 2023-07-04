@@ -3,14 +3,15 @@ package maildir
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -18,9 +19,7 @@ import (
 
 // Maildir represents a directory structure on disk containing mail
 type Maildir struct {
-	mutex     sync.RWMutex
 	directory string
-	messages  map[string][]rune
 }
 
 // Create creates a maildir directory structure
@@ -63,7 +62,6 @@ func New(dir string) (*Maildir, error) {
 
 	m := Maildir{
 		directory: dir,
-		messages:  make(map[string][]rune, 0),
 	}
 	err := m.Scan()
 	if err != nil {
@@ -98,17 +96,15 @@ func createFilename(msgid string, flags []rune) string {
 	} else {
 		filename = msgid
 	}
-	filename = msgid + ":2," + string(flags)
+	filename += ":2," + string(flags)
 	return filename
 }
 
 // Write replaces an existing message with new content
 func (m *Maildir) Write(msgid string, msg []byte) (string, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	name := createUniqueName()
 	tmpfilename := path.Join(m.directory, "tmp", name)
-	err := ioutil.WriteFile(tmpfilename, msg, os.FileMode(0600))
+	err := os.WriteFile(tmpfilename, msg, os.FileMode(0600))
 	if err != nil {
 		return ``, err
 	}
@@ -122,11 +118,9 @@ func (m *Maildir) Write(msgid string, msg []byte) (string, error) {
 
 // Add adds a new message to a maildir
 func (m *Maildir) Add(msg []byte) (string, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	name := createUniqueName()
 	tmpfilename := path.Join(m.directory, "tmp", name)
-	err := ioutil.WriteFile(tmpfilename, msg, os.FileMode(0600))
+	err := os.WriteFile(tmpfilename, msg, os.FileMode(0600))
 	if err != nil {
 		return ``, err
 	}
@@ -138,39 +132,75 @@ func (m *Maildir) Add(msg []byte) (string, error) {
 	return name, nil
 }
 
+// findByMsgID returns the filename holding msgid
+func findByMsgID(directory, msgid string) (string, error) {
+	files, err := os.ReadDir(directory)
+	if err != nil {
+		return "", err
+	}
+	for _, file := range files {
+		name := file.Name()
+		if strings.HasPrefix(name, msgid) {
+			path := filepath.Join(directory, name)
+			if file.IsDir() {
+				return path, errors.New("msgid " + msgid + " is a directory")
+			}
+			return path, nil
+		}
+	}
+	return "", os.ErrNotExist
+}
+
+// Strips the message flags off for just the msgid
+func getMsgIDFromFilename(f string) string {
+	i := strings.Index(f, ":")
+	if i == -1 {
+		return f
+	}
+	return f[0:i]
+}
+
 func (m *Maildir) Read(msgid string) ([]byte, error) {
-	m.mutex.RLock()
-	defer m.mutex.Unlock()
-	msg, err := ioutil.ReadFile(path.Join(m.directory, "new", msgid))
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
+	msgpath, err := findByMsgID(path.Join(m.directory, "new"), msgid)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			msgpath, err = findByMsgID(path.Join(m.directory, "cur"), msgid)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
-	// If we found it, we have to move it
-	msg, err = ioutil.ReadFile(path.Join(m.directory, "cur", msgid))
+	msg, err := os.ReadFile(msgpath)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
-	}
-	if msg != nil {
-		return msg, nil
 	}
 	return msg, nil
 }
 
+// List returns an array of valid message identifiers
 func (m *Maildir) List() ([]string, error) {
-	m.mutex.RLock()
-	defer m.mutex.Unlock()
+	// Check for new messages so we only have to read one dir
+	m.Scan()
+
 	msgs := make([]string, 0)
-	for k := range m.messages {
-		msgs = append(msgs, k)
+	files, err := os.ReadDir(path.Join(m.directory, "cur"))
+	if err != nil {
+		return msgs, err
+	}
+	for _, file := range files {
+		msgid := getMsgIDFromFilename(file.Name())
+		if !file.IsDir() {
+			msgs = append(msgs, msgid)
+		}
 	}
 	return msgs, nil
 }
 
 // Scan checks a maildir for new messages, moving them to cur
 func (m *Maildir) Scan() error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	msgs, err := ioutil.ReadDir(path.Join(m.directory, "new"))
 	if err != nil {
 		return err
@@ -184,26 +214,31 @@ func (m *Maildir) Scan() error {
 		if err != nil {
 			return err
 		}
-
-		// Add to the index with flags set
-		m.messages[name] = make([]rune, 0)
 	}
 	return nil
 }
 
 func (m *Maildir) Flags(msgid string) ([]rune, error) {
-	m.mutex.RLock()
-	defer m.mutex.Unlock()
-	runes, ok := m.messages[msgid]
-	if !ok {
-		return nil, errors.New("message not found")
+	curpath := path.Join(m.directory, "cur")
+	name, err := findByMsgID(curpath, msgid)
+	if err != nil {
+		return nil, err
 	}
-	return runes, nil
+	result := make([]rune, 0)
+	i := strings.Index(name, ":2,")
+	if i != -1 {
+		for _, r := range name {
+			result = append(result, r)
+		}
+
+		sort.Slice(result, func(i, j int) bool {
+			return i < j
+		})
+	}
+	return result, nil
 }
 
 func (m *Maildir) SetFlag(msgid string, flag rune, on bool) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	flags, err := m.Flags(msgid)
 	if err != nil {
 		return err
@@ -226,23 +261,15 @@ func (m *Maildir) SetFlag(msgid string, flag rune, on bool) error {
 }
 
 func (m *Maildir) SetFlags(msgid string, flags []rune) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	oldflags, ok := m.messages[msgid]
-	if !ok {
-		return errors.New("message not found")
+	oldfilename, err := findByMsgID(path.Join(m.directory, "cur"), msgid)
+	if err != nil {
+		return err
 	}
-
-	oldfilename := path.Join(m.directory, "cur", createFilename(msgid, oldflags))
 	newfilename := path.Join(m.directory, "cur", createFilename(msgid, flags))
-
-	err := os.Rename(oldfilename, newfilename)
+	err = os.Rename(oldfilename, newfilename)
 	if err != nil {
 		return err
 	}
 
-	// Update the index
-	m.messages[msgid] = flags
 	return nil
 }
