@@ -99,8 +99,33 @@ func createFilename(msgid string, flags []rune) string {
 	return filename
 }
 
-// Delete removes the maildir itself
-func (m *Maildir) Delete() error {
+// Removes a message from the maildir
+func (m *Maildir) Delete(msgids ...string) error {
+	// Check for new messages so we only have to read one dir
+	m.Scan()
+	files, err := os.ReadDir(path.Join(m.directory, "cur"))
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		if !file.IsDir() {
+			name := file.Name()
+			for _, msgid := range msgids {
+				if strings.HasPrefix(name, msgid) {
+					path := filepath.Join(m.directory, "cur", name)
+					err = os.Remove(path)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// Removes the maildir itself
+func (m *Maildir) Remove() error {
 	return os.RemoveAll(m.directory)
 }
 

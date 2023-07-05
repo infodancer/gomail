@@ -44,10 +44,32 @@ func TestMaildir(t *testing.T) {
 		}
 		strings.Contains(string(msg), body)
 	}
-	md.Delete()
+	err = md.Delete()
+	assert.NoError(t, err)
 }
 
 func TestMaildirDelete(t *testing.T) {
+	body := "Test message."
+	tmpdir, err := os.MkdirTemp("", "maildir-test-")
+	assert.NoError(t, err, "error creating tmpdir")
+	defer os.RemoveAll(tmpdir)
+
+	md, err := Create(path.Join(tmpdir, "Maildir"))
+	assert.NoError(t, err, "error creating maildir: %w", err)
+	msgid, err := md.Add([]byte(body))
+	assert.NoError(t, err, "error adding message: %w", err)
+
+	err = md.Delete(msgid)
+	assert.NoError(t, err, "error deleting message %s: %w", msgid, err)
+	_, err = md.Read(msgid)
+	if assert.Error(t, err, "no error reading deleted message") {
+		assert.ErrorContains(t, err, "", "expected failure to read deleted message")
+	}
+	err = md.Remove()
+	assert.NoError(t, err, "error removing maildir: %w", err)
+}
+
+func TestMaildirRemove(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "maildir-test-")
 	assert.NoError(t, err, "error creating tmpdir")
 	defer os.RemoveAll(tmpdir)
