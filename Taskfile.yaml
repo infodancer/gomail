@@ -1,0 +1,28 @@
+version: "3"
+
+tasks:
+  default:
+    desc: Build everything
+    deps:
+      - smtpd
+      - pop3d
+  smtpd:
+    desc: Build smtpd
+    cmds:
+      - echo "Building smtpd..."
+      - go build -o build/smtpd cmd/smtpd/smtpd.go
+  pop3d:
+    desc: Build pop3d
+    cmds:
+      - echo "Building pop3d..."
+      - go build -o build/pop3d cmd/pop3d/pop3d.go
+package:
+    desc: Package everything
+    deps:
+      - build
+    cmds:
+      - echo "Packaging..."
+clean:
+    desc: Clean everything
+    deps:
+      - rm -rf build
