@@ -6,6 +6,7 @@ tasks:
     deps:
       - smtpd
       - pop3d
+      - package
   smtpd:
     desc: Build smtpd
     cmds:
@@ -23,8 +24,6 @@ tasks:
       - go test ./...
   package:
     desc: Package everything
-    deps:
-      - build
     cmds:
       - echo "Packaging..."
   clean:

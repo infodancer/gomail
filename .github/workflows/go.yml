@@ -20,7 +20,7 @@ jobs:
         go-version: 1.23
     - name: Install Task
       uses: arduino/setup-task@v2
-    -name: Install nfpm
+    - name: Install nfpm
       run: go get github.com/goreleaser/nfpm/v2/cmd/nfpm
     - name: Build
       run: task
