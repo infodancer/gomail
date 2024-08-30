@@ -375,3 +375,15 @@
       committer:
         name: Matthew Hunter
         email: matthew@infodancer.org
+- semver: 0.0.1
+  date: 2024-08-30T06:50:12.365772516-05:00
+  packager: ""
+  changes:
+    - commit: b157b166d68c73ecaea15ece9567cb88152dd4aa
+      note: packaging setup
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
