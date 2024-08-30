@@ -16,13 +16,18 @@ tasks:
     cmds:
       - echo "Building pop3d..."
       - go build -o build/pop3d cmd/pop3d/pop3d.go
-package:
+  test:
+    desc: Run tests
+    cmds:
+      - echo "Running tests..."
+      - go test ./...
+  package:
     desc: Package everything
     deps:
       - build
     cmds:
       - echo "Packaging..."
-clean:
+  clean:
     desc: Clean everything
     deps:
       - rm -rf build
