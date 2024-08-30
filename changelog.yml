@@ -1,0 +1,377 @@
+- semver: 0.0.1
+  date: 2024-08-30T00:48:32-05:00
+  packager: Matthew Hunter <matthew@infodancer.org>
+  changes:
+    - commit: c961f8267fcf73d63d3cc0b6aa2bc6c2a00b781e
+      note: add nfpm
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 454516c056f3199cab551a87d60dcd81be89f06f
+      note: add nfpm
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 61471f4aa2046ba3ca6ca65e13300ae1bf849769
+      note: add tests
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 664726bee8e29c4743e2b53e632d391ba19da33b
+      note: fix workflow
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 924c941f69d133b2618413eced119cabb04dbbd9
+      note: fix workflow
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 62d402269699f9298ae48d4290d4875f3d9cfd82
+      note: add taskfile, workflow updates
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 0919cf16b999726c27cef51731cc52e788de73f9
+      note: Add maildir remove and delete funcs
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: ada6f1f9f51f159efc734aaee747fd0bc8955b21
+      note: Add maildir delete function
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: ef51405daa87e970e6e6498a5c359277a617b3f4
+      note: Adjust handling of logging
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: a8fc744df43867a938f823a724a3d0f9b2a09c7d
+      note: |-
+        Add debian pkg (#1)
+
+        * remove deprecated call
+
+        * Add configuration support
+
+        * Add debian package info
+
+        * Add package script
+
+        * Add gitignore for build dir
+      author:
+        name: Matthew
+        email: 56937361+infodancer@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 9a5e9649fde45d8d396b6e3738f289239b97bdb2
+      note: fix tests and remove in memory index
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: bad7e624eb7bd76629684e4be204ea16b67d6b68
+      note: fix smtpd tests
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 1434419f9a0851a956f9c96373c3a4cac392f3ff
+      note: Fix tests
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 94fd7a062cc04c4f63cc3d38c7d9bc429e6100ca
+      note: add mod init
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 0b9a9e21f5fb39fc6f1046a07669f6c1398d6563
+      note: Create go.yml
+      author:
+        name: Matthew
+        email: 56937361+infodancer@users.noreply.github.com
+      committer:
+        name: GitHub
+        email: noreply@github.com
+    - commit: 51e3f1973f3115bdf94d1fa8d814b0b3f2c05f05
+      note: Small updates
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 69c3ec1bb99e6ea9b9c1a9783ed0418af23511d8
+      note: Mod init and gitignore
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 0dded31c8dbe6c3587c781ce6e67dee89d56de8b
+      note: Runs, a little...
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: afa9b441f55d23d4c04e1468891cc4d3b6ac4a3f
+      note: Buildable again
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 812a3bbc590029b552d04ce89be2a3de9113c05d
+      note: Refactoring
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 0e3e46b3b99263ac610ca0c10caa04c33d0586eb
+      note: Add connection interface
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 40215e6648dff628c28c2192acec02d7af99ef64
+      note: |-
+        Restructure for a single binary to use with docker.
+
+        Still not fully functional, but compiles so a decent intermediate step.
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: d7a6bde303ca97026f9e1adaa7424e26d5059f68
+      note: Partial commit to move to github
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 6b0c7634d42720bdae8a4bc3950212b7ab42711e
+      note: Merge branch 'master' of ssh://git.infodancer.org/srv/git/gomail
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: b2102b76053b8d9e4d455a946f4a52eb0a712355
+      note: Add smtpsend for client smtp handling
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 7127f600c5d0fa011e9964727c04bba25d6c024a
+      note: Add some work on client smtp
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 4d74c7fba20979a7862b2014774ecbbdf9426344
+      note: Spam processing sort of works
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 94e85276cc7dffec73e1943d8315b6a36ca5a480
+      note: |-
+        Test succeeds in queueing a message
+
+        Add test scripts for quick testing of basic functions
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: f611c9964fa81e87993cd48ff801f169d03f7f6b
+      note: Added some suspicious address checks
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 9c9a869a4d44d17fa8ea3e8332de20c2e61f9841
+      note: |-
+        Checking for user and maildir existance works
+
+        Temporary and permanent errors returned as appropriate
+        Path to a user's mailbox is now domains/example.com/users/test/Maildir
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: c097a9e89d299f875a6a058a0eb6215530d24cf3
+      note: Fixed import paths and implemented domain and user checking
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 21816966450c10577a27845d9f981aaa93ec9b4a
+      note: Updated readme
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: ff15f164870af6d9913622ea44b4322c9917f45d
+      note: Added comment line options and some basic socket framework
+      author:
+        name: Matthew Hunter
+        email: mahunt@us.ibm.com
+      committer:
+        name: Matthew Hunter
+        email: mahunt@us.ibm.com
+    - commit: 34d8fbb7f00fafe53e9278bbffe634bbafc46a26
+      note: Added initial smtpsender
+      author:
+        name: Matthew Hunter
+        email: mahunt@us.ibm.com
+      committer:
+        name: Matthew Hunter
+        email: mahunt@us.ibm.com
+    - commit: 4593c322e961bba3f101d7c6e949d3e63392cf0d
+      note: Added readmes
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: fd86843e315128042f4c32d3b390d58a7a8e6659
+      note: Add domain and user support
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 64f8daf74583034a266da8b7116c66b713458140
+      note: Building out address framework
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 81a707aef16ed98565d2b26e9e06af515c827bdb
+      note: Add unique name function
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 6309710f8ff90ae4c52dcb63dec3e5008b949c20
+      note: Improve checkspam method
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 6d8bef45eac703a19564cdd3378359ab598d97f1
+      note: Fleshing out smtpd, adding address package
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 24e08c29f43af228444041d9332377ec1af1ed76
+      note: Fix package layout
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: c3f4bad384ab6cf5ef4b8360ccc6539853896d16
+      note: Updates
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: 58bfdd40318f3f800d2a5f67c598ace4583046e9
+      note: Updates
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+    - commit: fc1948832ef5ffd5b44971a510163cfc55f2443f
+      note: Initial setup
+      author:
+        name: Matthew Hunter
+        email: matthew@infodancer.org
+      committer:
+        name: Matthew Hunter
+        email: matthew@infodancer.org

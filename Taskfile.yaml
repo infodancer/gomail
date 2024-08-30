@@ -24,9 +24,26 @@ tasks:
       - go test ./...
   package:
     desc: Package everything
+    deps: 
+      - deb
+      - rpm
+  deb:
+    desc: Build deb package
     cmds:
-      - echo "Packaging..."
+      - echo "Building deb package..."
+      - nfpm pkg --config nfpm.yaml --packager deb --target build/ 
+  rpm:
+    desc: Build rpm package
+    cmds:
+      - echo "Building rpm package..."
+      - nfpm pkg --config nfpm.yaml --packager rpm --target build/
+  lintian:
+    desc: Run lintian
+    platforms: [linux]
+    cmds:
+      - echo "Running lintian..."
+      - lintian build/*.deb
   clean:
     desc: Clean everything
-    deps:
+    cmds:
       - rm -rf build

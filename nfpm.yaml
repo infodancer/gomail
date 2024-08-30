@@ -1,0 +1,49 @@
+# nfpm example configuration file
+#
+# check https://nfpm.goreleaser.com/configuration for detailed usage
+#
+name: "gomail"
+arch: "amd64"
+platform: "linux"
+version: "0.0.1"
+section: "default"
+priority: "extra"
+provides:
+- mail-transport-agent
+depends:
+- golang
+recommends:
+- whatever
+suggests:
+- something-else
+conflicts:
+- not-foo
+- not-bar
+maintainer: "Matthew Hunter <matthew@infodancer.org>"
+description: "Gomail is mail server software."
+vendor: "Infodancer"
+homepage: "https://github.com/infodancer/gomail"
+license: "MIT"
+changelog: "changelog.yaml"
+contents:
+- src: ./build/smtpd
+  dst: /usr/bin/smtpd
+- src: ./build/pop3d
+  dst: /usr/bin/pop3d
+- src: ./etc/smtpd.json
+  dst: /etc/gomail/smtpd.json
+  type: config
+- src: ./etc/pop3d.json
+  dst: /etc/gomail/pop3d.json
+  type: config
+- src: /usr/bin/foo
+  dst: /sbin/foo
+  type: symlink
+overrides:
+  rpm:
+    scripts:
+      postremove: ./scripts/postremove.sh
+  deb:
+    scripts:
+      postinstall: ./scripts/postinstall.sh
+
