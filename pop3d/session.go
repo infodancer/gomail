@@ -37,7 +37,11 @@ func (s Session) HandleConnection() error {
 			}
 			s.Println("io error reading from connection")
 		}
-		s.HandleInputLine(line)
+		_, err = s.HandleInputLine(line)
+		if err != nil {
+			s.Println("error handling input line")
+			return err
+		}
 	}
 	return nil
 }

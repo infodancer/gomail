@@ -76,7 +76,8 @@ func TestMaildirRemove(t *testing.T) {
 
 	md, err := Create(path.Join(tmpdir, "Maildir"))
 	assert.NoError(t, err, "error creating maildir: %w", err)
-	md.Delete()
+	err = md.Delete()
+	assert.NoError(t, err, "error deleting maildir: %w", err)
 	_, err = os.Stat(md.directory)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("maildir delete failed to remove maildir")
