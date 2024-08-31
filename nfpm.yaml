@@ -23,11 +23,11 @@ contents:
 - src: ./build/smtpd
   dst: /usr/bin/smtpd
   file_info:
-    mode: '0755'
+    mode: 0x0755
 - src: ./build/pop3d
   dst: /usr/bin/pop3d
   file_info:
-    mode: '0755'
+    mode: 0x0755
 - src: ./etc/smtpd.json
   dst: /etc/gomail/smtpd.json
   type: config
@@ -38,12 +38,12 @@ contents:
   dst: /usr/share/doc/<product_name>/copyright
   packager: deb
   file_info:
-    mode: '0644'
+    mode: 0x0644
 - src: .lintian-overrides
   dst: ./usr/share/lintian/overrides/nfpm
   packager: deb
   file_info:
-    mode: '0644'
+    mode: 0x0644
 overrides:
   rpm:
     scripts:
