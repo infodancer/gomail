@@ -13,7 +13,13 @@ var Version string
 
 func main() {
 	cfgfile := flag.String("cfg", "/opt/infodancer/gomail/etc/pop3d.json", "The configuration file")
+	versionFlag := flag.Bool("version", false, "Print the version and exit")
 	flag.Parse()
+
+	if versionFlag != nil && *versionFlag {
+		log.Println("Version: " + Version)
+		os.Exit(0)
+	}
 
 	cfg, err := pop3d.ReadConfigFile(*cfgfile)
 	if err != nil {
