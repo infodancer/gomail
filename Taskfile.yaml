@@ -11,17 +11,33 @@ tasks:
     desc: Build smtpd
     cmds:
       - echo "Building smtpd..."
-      - go build -o build/smtpd cmd/smtpd/smtpd.go
+      - go build -ldflags="-X smtpd.Version={{.GIT_COMMIT}}" -o build/smtpd cmd/smtpd/smtpd.go
+    vars:
+      GIT_COMMIT:
+        sh: git log -n 1 --format=%h
   pop3d:
     desc: Build pop3d
     cmds:
       - echo "Building pop3d..."
-      - go build -o build/pop3d cmd/pop3d/pop3d.go
+      - go build -ldflags="-X pop3d.Version={{.GIT_COMMIT}}" -o build/pop3d cmd/pop3d/pop3d.go
+    vars:
+      GIT_COMMIT:
+        sh: git log -n 1 --format=%h
   test:
     desc: Run tests
     cmds:
       - echo "Running tests..."
       - go test ./...
+  lint:
+    desc: Run linters
+    cmds:
+      - echo "Running linters..."
+      - golangci-lint run
+  govulncheck:
+    desc: Run govulncheck
+    cmds:
+      - echo "Running govulncheck..."
+      - govulncheck ./...
   package:
     desc: Package everything
     deps: 
@@ -29,21 +45,32 @@ tasks:
       - rpm
   deb:
     desc: Build deb package
+    deps:
+      - smtpd
+      - pop3d
     cmds:
       - echo "Building deb package..."
+      - strip build/smtpd build/pop3d
       - nfpm pkg --config nfpm.yaml --packager deb --target build/ 
   rpm:
     desc: Build rpm package
+    deps:
+      - smtpd
+      - pop3d
     cmds:
       - echo "Building rpm package..."
       - nfpm pkg --config nfpm.yaml --packager rpm --target build/
   lintian:
     desc: Run lintian
+    deps:
+      - deb
     platforms: [linux]
     cmds:
-      - echo "Running lintian..."
-      - lintian build/*.deb
+      - for: sources
+        cmd: lintian {{joinPath .ITEM}}
+    sources:
+      - build/*.deb
   clean:
     desc: Clean everything
     cmds:
-      - rm -rf build
+      - rm -rf build/*
