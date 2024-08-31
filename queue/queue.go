@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -111,12 +110,12 @@ func (q *Queue) Enqueue(sender string, recipients []string, msg []byte) error {
 	logger.Printf("Writing envelope: %v", string(envMarshalled))
 
 	logger.Printf("Writing message to queue file: %v", msgFile)
-	err = ioutil.WriteFile(envFile, envMarshalled, 0644)
+	err = os.WriteFile(envFile, envMarshalled, 0644)
 	if err != nil {
 		return errors.New("could not write envelope to file")
 	}
 
-	err = ioutil.WriteFile(msgFile, msg, 0644)
+	err = os.WriteFile(msgFile, msg, 0644)
 	if err != nil {
 		return errors.New("could not write message to file")
 	}
