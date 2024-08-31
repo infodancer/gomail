@@ -1,0 +1,2 @@
+gomail: statically-linked-binary usr/bin/pop3d
+gomail: statically-linked-binary usr/bin/smtpd
