@@ -2,7 +2,6 @@ package queue
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestCreateQueue(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "queue")
+	tempDir, err := os.MkdirTemp("", "queue")
 	assert.NoError(t, err, "failed to create temporary directory: %w", err)
 	q, err := CreateQueue(tempDir)
 	assert.NoError(t, err, "failed to create queue directory: %w", err)
