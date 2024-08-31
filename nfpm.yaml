@@ -2,43 +2,46 @@
 #
 # check https://nfpm.goreleaser.com/configuration for detailed usage
 #
-name: "gomail"
-arch: "amd64"
-platform: "linux"
-version: "0.0.1"
-section: "default"
-priority: "extra"
+name: gomail
+arch: amd64
+platform: linux
+version: 0.0.1
+section: default
+priority: optional
 provides:
 - mail-transport-agent
 depends:
 - golang
-recommends:
-- whatever
-suggests:
-- something-else
-conflicts:
-- not-foo
-- not-bar
-maintainer: "Matthew Hunter <matthew@infodancer.org>"
-description: "Gomail is mail server software."
-vendor: "Infodancer"
-homepage: "https://github.com/infodancer/gomail"
-license: "MIT"
-changelog: "changelog.yaml"
+- libc6
+maintainer: Matthew Hunter <matthew@infodancer.org>
+description: Gomail is mail server software.
+vendor: Infodancer
+homepage: https://github.com/infodancer/gomail
+license: MIT
+changelog: changelog.yml
 contents:
 - src: ./build/smtpd
   dst: /usr/bin/smtpd
+    mode: 0755
 - src: ./build/pop3d
   dst: /usr/bin/pop3d
+    mode: 0755
 - src: ./etc/smtpd.json
   dst: /etc/gomail/smtpd.json
   type: config
 - src: ./etc/pop3d.json
   dst: /etc/gomail/pop3d.json
   type: config
-- src: /usr/bin/foo
-  dst: /sbin/foo
-  type: symlink
+- src: ./debian/copyright
+  dst: /usr/share/doc/<product_name>/copyright
+  packager: deb
+  file_info:
+    mode: 0644
+- src: .lintian-overrides
+  dst: ./usr/share/lintian/overrides/nfpm
+  packager: deb
+  file_info:
+    mode: 0644
 overrides:
   rpm:
     scripts:
