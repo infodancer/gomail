@@ -32,6 +32,6 @@ Intended built-in features (in no particular order):
 * (Partial) support for checkpassword
 * (Maybe eventually) Administration via REST API
 
-# Developer Requirements
+## Developer Requirements
 
 Relies on [Task](https://taskfile.dev/) for building binaries and [nfpm](https://nfpm.goreleaser.com/) to build deb and rpm packages.  Changlelogs are maintained with [chglog](https://github.com/goreleaser/chglog).
