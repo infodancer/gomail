@@ -9,6 +9,8 @@ import (
 	"github.com/infodancer/gomail/pop3d"
 )
 
+var Version string
+
 func main() {
 	cfgfile := flag.String("cfg", "/opt/infodancer/gomail/etc/pop3d.json", "The configuration file")
 	flag.Parse()
