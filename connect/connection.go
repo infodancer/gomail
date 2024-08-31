@@ -20,13 +20,13 @@ type TCPConnection interface {
 	GetTCPRemoteHost() string
 	// IsSecure returns true if the connection is encrypted
 	IsEncrypted() bool
-	Logger() log.Logger
+	Logger() *log.Logger
 }
 
 // StandardIOConnection expects stdin, stdout, and TCP info in the environment
 type StandardIOConnection struct {
 	rw     *bufio.ReadWriter
-	logger log.Logger
+	logger *log.Logger
 }
 
 func NewStandardIOConnection() (TCPConnection, error) {
@@ -36,7 +36,7 @@ func NewStandardIOConnection() (TCPConnection, error) {
 	logger := log.New(os.Stderr, "", 1|2|6)
 	stdcon := StandardIOConnection{
 		rw:     bufio.NewReadWriter(r, w),
-		logger: *logger,
+		logger: logger,
 	}
 	return &stdcon, nil
 }
@@ -49,7 +49,7 @@ func (c *StandardIOConnection) Close() error {
 
 // Logger returns a pointer to the logger for this connection
 // Usually this logs to stderr
-func (c *StandardIOConnection) Logger() log.Logger {
+func (c *StandardIOConnection) Logger() *log.Logger {
 	return c.logger
 }
 

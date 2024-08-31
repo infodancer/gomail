@@ -30,15 +30,12 @@ type SMTPConnection struct {
 var sender *string
 var recipient *string
 var hostname *string
-var username *string
-var password *string
-var authmethod *string
 
 func main() {
 	hostname = flag.String("hostname", "", "The hostname or ip address to connect to, with optional port number")
-	username = flag.String("username", "", "The user to authenticate as")
-	password = flag.String("password", "", "The password to authenticate with")
-	authmethod = flag.String("authmethod", "", "The authentication method to use")
+	// username := flag.String("username", "", "The user to authenticate as")
+	// password := flag.String("password", "", "The password to authenticate with")
+	// authmethod := flag.String("authmethod", "", "The authentication method to use")
 	sender = flag.String("sender", "", "The envelope sender")
 	recipient = flag.String("recipient", "", "The envelope recipient")
 	flag.Parse()
@@ -74,13 +71,13 @@ func main() {
 	// Handle authentication here
 
 	// Actually send the message
-	con.SendMailFrom(sender)
+	err = con.SendMailFrom(sender)
 	if err != nil {
 		fmt.Println("Remote server not ready; greeting failed")
 		os.Exit(1)
 	}
 
-	con.SendRcptTo(recipient)
+	err = con.SendRcptTo(recipient)
 	if err != nil {
 		fmt.Println("Remote server not ready; greeting failed")
 		os.Exit(1)
@@ -189,11 +186,6 @@ func isPortSpecified(hostname *string) bool {
 func (c SMTPConnection) SendLine(line *string) error {
 	_, err := fmt.Fprintf(c.Conn, "%v\r\n", line)
 	fmt.Println(">" + *line + "\r\n")
-	return err
-}
-
-func (c SMTPConnection) sendLine(line *string) error {
-	_, err := fmt.Fprintf(c.Conn, "%v\r\n", line)
 	return err
 }
 

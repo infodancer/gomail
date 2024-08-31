@@ -92,6 +92,7 @@ func (s *Session) ReadLine() (string, error) {
 
 // HandleInputLine accepts a line and handles it
 func (s *Session) HandleInputLine(line string) (int, string, bool) {
+	var err error
 	cmd := strings.Split(line, " ")
 	command := strings.ToUpper(strings.TrimSpace(cmd[0]))
 	switch command {
@@ -100,12 +101,24 @@ func (s *Session) HandleInputLine(line string) (int, string, bool) {
 	case "EHLO":
 		{
 			// This is a bit of a special case because of extensions
-			s.SendLine("250-8BITMIME")
-			s.SendLine("250-PIPELINING")
-			s.SendLine("250-AUTH CRAM-MD5")
+			err = s.SendLine("250-8BITMIME")
+			if err != nil {
+				return 500, "i/o error", false
+			}
+			err = s.SendLine("250-PIPELINING")
+			if err != nil {
+				return 500, "i/o error", false
+			}
+			err = s.SendLine("250-AUTH CRAM-MD5")
+			if err != nil {
+				return 500, "i/o error", false
+			}
 			if s.Config.Maxsize != 0 && s.maxsize != 0 {
 				size := strconv.FormatInt(s.maxsize, 10)
-				s.SendLine("250-SIZE " + size)
+				err = s.SendLine("250-SIZE " + size)
+				if err != nil {
+					return 500, "Unrecognized command", false
+				}
 			}
 			return s.processEHLO(line)
 		}
@@ -176,7 +189,10 @@ func (s *Session) processAUTH(line string) (int, string, bool) {
 			return 500, "Unrecognized command", false
 		}
 		challenge := createChallenge()
-		s.SendCodeLine(354, challenge)
+		err := s.SendCodeLine(354, challenge)
+		if err != nil {
+			return 550, "i/o error", false
+		}
 		resp, err := s.ReadLine()
 		if err != nil {
 			return 550, "Authentication failed", false
@@ -309,7 +325,10 @@ func (s *Session) processDATA(line string) (int, string, bool) {
 	s.AddHeader(rcv)
 
 	// Accept the start of message data
-	s.SendCodeLine(354, "Send message content; end with <CRLF>.<CRLF>")
+	err = s.SendCodeLine(354, "Send message content; end with <CRLF>.<CRLF>")
+	if err != nil {
+		return 451, "message could not be accepted at this time, try again later", false
+	}
 	for finished := false; !finished; {
 		line, err := s.ReadLine()
 		if err != nil {
@@ -323,12 +342,17 @@ func (s *Session) processDATA(line string) (int, string, bool) {
 			} else {
 				// Check with spamc if needed
 				if len(s.Config.Spamc) > 0 {
-					s.Printf("session.Data is %v bytes", len(s.Data))
-					s.Printf("session.Data:\n%v", s.Data)
+					err = s.Printf("session.Data is %v bytes", len(s.Data))
+					if err != nil {
+						return 451, "i/o error", false
+					}
+					err = s.Printf("session.Data:\n%v", s.Data)
+					if err != nil {
+						return 451, "i/o error", false
+					}
 					msg, err := s.checkSpam()
 					if err != nil {
-						// Temporary failure if we can't check it
-						return 451, "message could not be accepted at this time, try again later", false
+						return 451, "i/o error", false
 					}
 					// We don't block here; let the user use their filters
 					s.Data = msg

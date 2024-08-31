@@ -60,8 +60,7 @@ func (domain *Domain) GetUser(name string) (*User, error) {
 		err := fmt.Errorf("user does not exist: %v", err)
 		return nil, err
 	}
-	var user User
-	user = User{}
+	user := User{}
 	user.Name = name
 	user.Path = filepath.Join(domain.Path, "users", name)
 	user.MaildirPath = filepath.Join(user.Path, "Maildir")
@@ -89,7 +88,7 @@ func (domain *Domain) GetUserMaildir(name string) (*maildir.Maildir, error) {
 }
 
 // validateDomainName ensures a domain name is safe to use for a filename
-func validateDomainName(name string) error {
+func ValidateDomainName(name string) error {
 	pattern := "[^a-zA-Z0-9_-]+"
 	exp, err := regexp.Compile(pattern)
 	if err != nil {

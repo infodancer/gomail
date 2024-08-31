@@ -16,8 +16,8 @@ var logger *log.Logger
 
 // SMTPConnection models an smtp network connection
 type SMTPConnection struct {
-	host *string
-	port int
+	Host *string
+	Port int
 }
 
 func main() {
@@ -26,13 +26,10 @@ func main() {
 	hostname := flag.String("hostname", "", "Override the mx lookup and use the specified host")
 	username := flag.String("username", "", "The username to use for smtp auth")
 	password := flag.String("password", "", "The password to use for smtp auth")
-	msgfile := flag.String("file", "", "The file to read the message from; stdin is used if left blank")
+	// msgfile := flag.String("file", "", "The file to read the message from; stdin is used if left blank")
 	logger := log.New(os.Stderr, "", 0)
 	logger.Println("gomail smtps started")
 	msg := ""
-	if msgfile != nil {
-
-	}
 	sendMessageDirect(hostname, username, password, sender, recipient, &msg)
 }
 
@@ -50,6 +47,10 @@ func OpenSMTPConnection(host string) (*SMTPConnection, *smtp.Error) {
 	result := SMTPConnection{}
 	// Wait for banner
 	banner, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		logger.Println("wait for banner failed")
+		return nil, smtp.NewError(451, "Connection dropped or I/O error")
+	}
 	logger.Println("<" + banner)
 	// Try EHLO
 	fmt.Fprintf(conn, "EHLO \r\n")
@@ -78,11 +79,6 @@ func OpenSMTPConnection(host string) (*SMTPConnection, *smtp.Error) {
 func (c SMTPConnection) SendCommand(line string) *smtp.Error {
 	c.sendLine(line)
 	return smtp.NewError(500, "Not yet implemented!")
-}
-
-// SendLine sends a single line without waiting for a response
-func (c SMTPConnection) readLine() (string, *smtp.Error) {
-	return "", smtp.NewError(500, "Not yet implemented")
 }
 
 // SendLine sends a single line without waiting for a response

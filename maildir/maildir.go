@@ -102,7 +102,10 @@ func createFilename(msgid string, flags []rune) string {
 // Removes a message from the maildir
 func (m *Maildir) Delete(msgids ...string) error {
 	// Check for new messages so we only have to read one dir
-	m.Scan()
+	err := m.Scan()
+	if err != nil {
+		return err
+	}
 	files, err := os.ReadDir(path.Join(m.directory, "cur"))
 	if err != nil {
 		return err
@@ -212,8 +215,10 @@ func (m *Maildir) Read(msgid string) ([]byte, error) {
 // List returns an array of valid message identifiers
 func (m *Maildir) List() ([]string, error) {
 	// Check for new messages so we only have to read one dir
-	m.Scan()
-
+	err := m.Scan()
+	if err != nil {
+		return nil, err
+	}
 	msgs := make([]string, 0)
 	files, err := os.ReadDir(path.Join(m.directory, "cur"))
 	if err != nil {
