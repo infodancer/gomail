@@ -5,6 +5,7 @@ in
 
 pkgs.mkShellNoCC {
   packages = with pkgs; [
+    go
     govulncheck
     golangci-lint
   ];
