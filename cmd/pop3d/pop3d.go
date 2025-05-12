@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/infodancer/gomail/config"
 	"github.com/infodancer/gomail/connect"
 	"github.com/infodancer/gomail/pop3d"
 )
@@ -12,7 +13,7 @@ import (
 var Version string
 
 func main() {
-	cfgfile := flag.String("cfg", "/opt/infodancer/gomail/etc/pop3d.json", "The configuration file")
+	cfgfile := flag.String("cfg", "/opt/infodancer/gomail/etc/pop3d.toml", "The configuration file")
 	versionFlag := flag.Bool("version", false, "Print the version and exit")
 	flag.Parse()
 
