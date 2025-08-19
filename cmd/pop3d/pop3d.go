@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/infodancer/gomail/config"
 	"github.com/infodancer/gomail/connect"
 	"github.com/infodancer/gomail/pop3d"
 )
