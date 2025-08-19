@@ -13,6 +13,8 @@ import (
 	"github.com/infodancer/gomail/maildir"
 )
 
+const validateDomainPattern string = "[^a-zA-Z0-9_-]+"
+
 // Domain holds information about a domain
 type Domain struct {
 	Name string
@@ -28,10 +30,17 @@ type User struct {
 
 var logger *log.Logger
 var domainRoot string
+var domainPattern *regexp.Regexp
 
 func init() {
+	var err error
 	domainRoot = "/srv/domains"
 	logger = log.New(os.Stderr, "", 0)
+	domainPattern, err = regexp.Compile(validateDomainPattern)
+	if err != nil {
+		err := fmt.Errorf("could not validate requested name; invalid regular expression: %w", err)
+		logger.Println(err)
+	}
 }
 
 // SetDomainRoot sets the root directory for the domain heirarchy; by default, /srv/domains
@@ -89,16 +98,9 @@ func (domain *Domain) GetUserMaildir(name string) (*maildir.Maildir, error) {
 
 // validateDomainName ensures a domain name is safe to use for a filename
 func ValidateDomainName(name string) error {
-	pattern := "[^a-zA-Z0-9_-]+"
-	exp, err := regexp.Compile(pattern)
-	if err != nil {
-		err := fmt.Errorf("could not validate requested name; invalid regular expression: %v", err)
-		return err
-	}
-
-	result := exp.ReplaceAllString(name, "")
+	result := domainPattern.ReplaceAllString(name, "")
 	if len(result) != len(name) {
-		err := fmt.Errorf("requested name contained illegal characters; should match %v", pattern)
+		err := fmt.Errorf("requested name contained illegal characters")
 		return err
 	}
 
