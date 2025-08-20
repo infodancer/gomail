@@ -53,7 +53,9 @@ func OpenSMTPConnection(host string) (*SMTPConnection, *smtp.Error) {
 	}
 	logger.Println("<" + banner)
 	// Try EHLO
-	fmt.Fprintf(conn, "EHLO \r\n")
+	if _, err := fmt.Fprintf(conn, "EHLO \r\n"); err != nil {
+		logger.Println("%w", err)
+	}
 	ehloresp, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		return nil, smtp.NewError(451, "Connection dropped or I/O error")
@@ -61,7 +63,9 @@ func OpenSMTPConnection(host string) (*SMTPConnection, *smtp.Error) {
 	// Fall back to HELO if it fails
 	if !strings.HasPrefix(ehloresp, "250 OK") {
 		logger.Println("EHLO failed")
-		fmt.Fprintf(conn, "HELO \r\n")
+		if _, err := fmt.Fprintf(conn, "HELO \r\n"); err != nil {
+			logger.Println("%w", err)
+		}
 		heloresp, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
 			logger.Println("HELO failed")

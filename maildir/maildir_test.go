@@ -14,7 +14,7 @@ func TestMaildir(t *testing.T) {
 	body := "Test message."
 	tmpdir, err := os.MkdirTemp("", "maildir-test-")
 	assert.NoError(t, err, "error creating tmpdir")
-	defer os.RemoveAll(tmpdir)
+	defer assert.NoError(t, os.RemoveAll(tmpdir))
 	md, err := Create(path.Join(tmpdir, "Maildir"))
 	assert.NoError(t, err, "error creating maildir: %w", err)
 
@@ -30,7 +30,7 @@ func TestMaildir(t *testing.T) {
 	if err != nil {
 		t.Fatal("error reading message")
 	}
-	if rmsg == nil || len(rmsg) <= 0 {
+	if len(rmsg) <= 0 {
 		t.Fatal("error reading message")
 	}
 	msgs, err = md.List()
@@ -52,8 +52,7 @@ func TestMaildirDelete(t *testing.T) {
 	body := "Test message."
 	tmpdir, err := os.MkdirTemp("", "maildir-test-")
 	assert.NoError(t, err, "error creating tmpdir")
-	defer os.RemoveAll(tmpdir)
-
+	defer assert.NoError(t, os.RemoveAll(tmpdir))
 	md, err := Create(path.Join(tmpdir, "Maildir"))
 	assert.NoError(t, err, "error creating maildir: %w", err)
 	msgid, err := md.Add([]byte(body))
@@ -72,7 +71,7 @@ func TestMaildirDelete(t *testing.T) {
 func TestMaildirRemove(t *testing.T) {
 	tmpdir, err := os.MkdirTemp("", "maildir-test-")
 	assert.NoError(t, err, "error creating tmpdir")
-	defer os.RemoveAll(tmpdir)
+	defer assert.NoError(t, os.RemoveAll(tmpdir))
 
 	md, err := Create(path.Join(tmpdir, "Maildir"))
 	assert.NoError(t, err, "error creating maildir: %w", err)

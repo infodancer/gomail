@@ -43,7 +43,9 @@ func NewStandardIOConnection() (TCPConnection, error) {
 
 // Close currently just flushes the buffers...
 func (c *StandardIOConnection) Close() error {
-	c.rw.Flush()
+	if err := c.rw.Flush(); err != nil {
+		c.logger.Print("error flushing stdio: %w", err)
+	}
 	return nil
 }
 
