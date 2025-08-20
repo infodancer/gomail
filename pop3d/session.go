@@ -35,11 +35,15 @@ func (s Session) HandleConnection() error {
 			if err == io.EOF {
 				break
 			}
-			s.Println("io error reading from connection")
+			if err := s.Println("io error reading from connection"); err != nil {
+				return err
+			}
 		}
 		_, err = s.HandleInputLine(line)
 		if err != nil {
-			s.Println("error handling input line")
+			if err := s.Println("error handling input line"); err != nil {
+				return err
+			}
 			return err
 		}
 	}
@@ -48,7 +52,9 @@ func (s Session) HandleConnection() error {
 
 // SendLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
 func (s Session) SendLine(line string) error {
-	s.Println("S:" + line)
+	if err := s.Println("S:" + line); err != nil {
+		return err
+	}
 	return s.Conn.WriteLine(line)
 }
 

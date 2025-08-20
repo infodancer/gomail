@@ -58,14 +58,20 @@ func (s *Session) Println(v ...any) error {
 }
 
 func (s *Session) HandleConnection() error {
-	defer s.Conn.Close()
+	defer func() {
+		if err := s.Conn.Close(); err != nil {
+			s.Conn.Logger().Printf("error: %s", err)
+		}
+	}()
 	for {
 		line, err := s.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			s.Println("io error reading from connection")
+			if err := s.Println("io error reading from connection"); err != nil {
+				s.Conn.Logger().Printf("error: %s", err)
+			}
 		}
 		s.HandleInputLine(line)
 	}
@@ -75,13 +81,17 @@ func (s *Session) HandleConnection() error {
 // SendCodeLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
 func (s *Session) SendCodeLine(code int, line string) error {
 	cline := fmt.Sprintf("%d %s\r\n", code, line)
-	s.Println("S:" + cline)
+	if err := s.Println("S:" + cline); err != nil {
+		s.Conn.Logger().Printf("error: %s", err)
+	}
 	return s.Conn.WriteLine(cline)
 }
 
 // SendLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
 func (s *Session) SendLine(line string) error {
-	s.Println("S:" + line)
+	if err := s.Println("S:" + line); err != nil {
+		s.Conn.Logger().Printf("error: %s", err)
+	}
 	return s.Conn.WriteLine(line)
 }
 
@@ -226,18 +236,24 @@ func (s *Session) processRCPT(line string) (int, string, bool) {
 	}
 	// Check for number of recipients
 	if len(s.Recipients) >= s.RecipientLimit {
-		s.Printf("Rejecting RCPT TO %d recipients already", len(s.Recipients))
+		if err := s.Printf("Rejecting RCPT TO %d recipients already", len(s.Recipients)); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 		return 452, "Too many recipients", false
 	}
 	// Check if this is being sent to a bounce address
 	if len(*addr) == 0 {
-		s.Println("Rejecting RCPT TO to bounce address: " + *addr)
+		if err := s.Println("Rejecting RCPT TO to bounce address: " + *addr); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 		return 503, "We don't accept mail to that address", false
 	}
 
 	// Before we actually do filesystem operations, sanitize the input
 	if IsSuspiciousAddress(*addr) {
-		s.Println("Rejecting suspicious RCPT TO: " + *addr)
+		if err := s.Println("Rejecting suspicious RCPT TO: " + *addr); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 		return 550, "Invalid address", false
 	}
 
@@ -264,7 +280,9 @@ func (s *Session) processRCPT(line string) (int, string, bool) {
 		user, err := dom.GetUser(recipient.User)
 		// Temporary error if we couldn't access the user for some reason
 		if err != nil {
-			s.Println("Error from GetUser: ", err)
+			if err := s.Println("Error from GetUser: ", err); err != nil {
+				s.Conn.Logger().Print(err)
+			}
 			return 451, "Address does not exist or cannot receive mail at this time, try again later", false
 		}
 		// If we got back nil without error, they really don't exist
@@ -274,19 +292,25 @@ func (s *Session) processRCPT(line string) (int, string, bool) {
 		// But if they do exist, check that their mailbox also exists
 		maildir, err := dom.GetUserMaildir(recipient.User)
 		if err != nil {
-			s.Println("User exists but GetUserMaildir errors: ", err)
+			if err := s.Println("User exists but GetUserMaildir errors: ", err); err != nil {
+				s.Conn.Logger().Print(err)
+			}
 			return 451, "Address does not exist or cannot receive mail at this time, try again later", false
 		}
 		// If we got back nil without error, the maildir doesn't exist, but this is a temporary (hopefully) setup problem
 		if maildir == nil {
-			s.Println("User exists but maildir is nil: ", err)
+			if err := s.Println("User exists but maildir is nil: ", err); err != nil {
+				s.Conn.Logger().Print(err)
+			}
 			return 451, "Maildir does not exist; try again later", false
 		}
 	}
 
 	// At this point, we are willing to accept this recipient
 	s.Recipients = append(s.Recipients, recipient.String())
-	s.Println("Recipient accepted: ", *addr)
+	if err := s.Println("Recipient accepted: ", *addr); err != nil {
+		s.Conn.Logger().Print(err)
+	}
 	return 250, "OK", false
 }
 
@@ -334,7 +358,9 @@ func (s *Session) processDATA(line string) (int, string, bool) {
 		if err != nil {
 			break
 		}
-		s.Printf(">%v\n", line)
+		if err := s.Printf(">%v\n", line); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 		if strings.HasPrefix(line, ".") {
 			if strings.HasPrefix(line, "..") {
 				// Remove escaped period character
@@ -359,16 +385,22 @@ func (s *Session) processDATA(line string) (int, string, bool) {
 				}
 				err := s.enqueue()
 				if err != nil {
-					s.Println("Unable to enqueue message!")
+					if err := s.Println("Unable to enqueue message!"); err != nil {
+						s.Conn.Logger().Print(err)
+					}
 					return 451, "message could not be accepted at this time, try again later", false
 				}
 				return 250, "message accepted for delivery", false
 			}
 		}
-		s.Printf("Appended %v bytes to existing %v bytes in session.Data", len(line), len(s.Data))
+		if err := s.Printf("Appended %v bytes to existing %v bytes in session.Data", len(line), len(s.Data)); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 		s.Data += line
 		s.Data += "\n"
-		s.Printf("New session.Data is %v bytes", len(s.Data))
+		if err := s.Printf("New session.Data is %v bytes", len(s.Data)); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 	}
 	// If we somehow get here without the message being completed, return a temporary failure
 	return 451, "message could not be accepted at this time, try again later", false
@@ -412,12 +444,16 @@ func (s *Session) checkSpam() (string, error) {
 			log.Fatal(err)
 		}
 
-		s.Printf("Executing spamc: %v", s.Config.Spamc)
+		if err := s.Printf("Executing spamc: %v", s.Config.Spamc); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 		if err := cmd.Start(); err != nil {
 			log.Fatal(err)
 		}
 
-		s.Printf("Beginning output processing: %v", s.Config.Spamc)
+		if err := s.Printf("Beginning output processing: %v", s.Config.Spamc); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 		result := ""
 
 		// Create reader and writer
@@ -431,19 +467,31 @@ func (s *Session) checkSpam() (string, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		s.Printf("Wrote %v bytes of %v to spamwriter", l, len(s.Data))
-		spamwriter.Flush()
-		stdin.Close()
-		s.Printf("Message written to spamc")
+		if err := s.Printf("Wrote %v bytes of %v to spamwriter", l, len(s.Data)); err != nil {
+			s.Conn.Logger().Print(err)
+		}
+		if err := spamwriter.Flush(); err != nil {
+			s.Conn.Logger().Print(err)
+		}
+		if err := stdin.Close(); err != nil {
+			s.Conn.Logger().Print(err)
+		}
+		if err := s.Printf("Message written to spamc"); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 
 		// Create a reader at least as big as the original message with extra space for headers
 
-		s.Printf("Reading message back from spamc")
+		if err := s.Printf("Reading message back from spamc"); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text()
-			s.Println(line)
+			if err := s.Println(line); err != nil {
+				s.Conn.Logger().Print(err)
+			}
 			result += line
 			result += "\n"
 		}
@@ -452,7 +500,9 @@ func (s *Session) checkSpam() (string, error) {
 			log.Fatal(err)
 		}
 
-		s.Printf("Waiting for spamc to exit")
+		if err := s.Printf("Waiting for spamc to exit"); err != nil {
+			s.Conn.Logger().Print(err)
+		}
 		err = cmd.Wait()
 		if err != nil {
 			log.Fatal(err)
@@ -460,7 +510,9 @@ func (s *Session) checkSpam() (string, error) {
 		}
 		return result, nil
 	}
-	s.Printf("spamc not configured!")
+	if err := s.Printf("spamc not configured!"); err != nil {
+		s.Conn.Logger().Print(err)
+	}
 	return s.Data, nil
 }
 

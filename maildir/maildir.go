@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -70,8 +69,6 @@ func New(dir string) (*Maildir, error) {
 	return &m, nil
 }
 
-var deliveryCount int64
-
 func createUniqueName() string {
 	date := time.Now()
 	left := date.Second()
@@ -80,9 +77,8 @@ func createUniqueName() string {
 	if err != nil {
 		right = `localhost`
 	}
-	atomic.AddInt64(&deliveryCount, 1)
 	pid := syscall.Getpid()
-	center := fmt.Sprintf("P%vM%vR%vQ%d", pid, date.Nanosecond(), random, deliveryCount)
+	center := fmt.Sprintf("P%vM%vR%vQ0", pid, date.Nanosecond(), random)
 	result := fmt.Sprintf("%v.%v.%v", left, center, right)
 	return result
 }
