@@ -60,7 +60,7 @@ func (s *Session) Println(v ...any) error {
 func (s *Session) HandleConnection() error {
 	defer func() {
 		if err := s.Conn.Close(); err != nil {
-			s.Conn.Logger().Printf("error: %s", err)
+			s.Conn.Logger().Printf("error closing connection: %s", err)
 		}
 	}()
 	for {
@@ -482,10 +482,10 @@ func (s *Session) checkSpam() (string, error) {
 			s.Conn.Logger().Print(err)
 		}
 		if err := spamwriter.Flush(); err != nil {
-			s.Conn.Logger().Print(err)
+			s.Conn.Logger().Printf("error flushing spamwriter: %s", err)
 		}
 		if err := stdin.Close(); err != nil {
-			s.Conn.Logger().Print(err)
+			s.Conn.Logger().Printf("error closing stdin: %s", err)
 		}
 		if err := s.Printf("Message written to spamc"); err != nil {
 			s.Conn.Logger().Print(err)
