@@ -173,20 +173,14 @@ func TestCheckSpam_WithInvalidSpamcCommand(t *testing.T) {
 	session := createTestSession()
 	session.Config.Spamc = "/nonexistent/command"
 
-	// This should cause a fatal error in the current implementation
-	// We can't easily test log.Fatal, but we can verify the behavior
-	// In a real implementation, this might be refactored to return an error instead
-	defer func() {
-		if r := recover(); r != nil {
-			// Expected behavior due to log.Fatal in the code
-		}
-	}()
-
 	_, err := session.checkSpam()
 	
-	// If we get here without a panic, the error handling might have been improved
 	if err == nil {
 		t.Errorf("Expected error with invalid spamc command")
+	}
+
+	if !strings.Contains(err.Error(), "no such file or directory") {
+		t.Errorf("Expected 'no such file or directory' error, got: %v", err)
 	}
 }
 
