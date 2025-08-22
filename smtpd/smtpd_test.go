@@ -3,6 +3,7 @@ package smtpd
 import (
 	"testing"
 
+	"github.com/infodancer/gomail/config"
 	"github.com/infodancer/gomail/connect"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,7 +38,7 @@ func TestIsSuspiciousAddress(t *testing.T) {
 }
 
 func TestHandleInputLine(t *testing.T) {
-	cfg := Config{ServerName: "testserver"}
+	cfg := Config{ServerConfig: config.ServerConfig{ServerName: "testserver"}}
 	c, err := connect.NewStandardIOConnection()
 	assert.NoError(t, err, "unable to create connection")
 	s := &Session{Conn: c, Config: cfg}
