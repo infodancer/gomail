@@ -72,19 +72,30 @@ func (s *Session) HandleConnection() error {
 			if err := s.Println("io error reading from connection"); err != nil {
 				s.Conn.Logger().Printf("error: %s", err)
 			}
+			break
 		}
-		s.HandleInputLine(line)
+		code, message, finished := s.HandleInputLine(line)
+		err = s.SendCodeLine(code, message)
+		if err != nil {
+			if err := s.Println("io error sending response"); err != nil {
+				s.Conn.Logger().Printf("error: %s", err)
+			}
+			break
+		}
+		if finished {
+			break
+		}
 	}
 	return nil
 }
 
 // SendCodeLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
 func (s *Session) SendCodeLine(code int, line string) error {
-	cline := fmt.Sprintf("%d %s\r\n", code, line)
+	cline := fmt.Sprintf("%d %s", code, line)
 	if err := s.Println("S:" + cline); err != nil {
 		s.Conn.Logger().Printf("error: %s", err)
 	}
-	return s.Conn.WriteLine(cline)
+	return s.Conn.WriteLine(cline + "\r\n")
 }
 
 // SendLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
