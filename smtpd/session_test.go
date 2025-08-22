@@ -60,6 +60,10 @@ func (m *MockConnection) GetTCPRemoteHost() string {
 	return "client.example.com"
 }
 
+func (m *MockConnection) IsEncrypted() bool {
+	return false
+}
+
 func (m *MockConnection) Logger() interface{} {
 	return nil
 }
