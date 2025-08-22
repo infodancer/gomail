@@ -1,4 +1,5 @@
-bin/
+bin/smtpd
+bin/pop3d
 build
 .task/
 .aider*
