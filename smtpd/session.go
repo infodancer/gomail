@@ -91,11 +91,11 @@ func (s *Session) HandleConnection() error {
 
 // SendCodeLine accepts a line without linefeeds and sends it with a CRLF and the provided response code
 func (s *Session) SendCodeLine(code int, line string) error {
-	cline := fmt.Sprintf("%d %s\r\n", code, line)
+	cline := fmt.Sprintf("%d %s", code, line)
 	if err := s.Println("S:" + cline); err != nil {
 		s.Conn.Logger().Printf("error: %s", err)
 	}
-	return s.Conn.WriteLine(cline)
+	return s.Conn.WriteLine(cline + "\r\n")
 }
 
 // SendLine accepts a line without linefeeds and sends it with a CRLF and the provided response code

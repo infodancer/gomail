@@ -79,7 +79,7 @@ func (c *StandardIOConnection) ReadLine() (string, error) {
 
 // WriteLine automatically appends a linefeed character
 func (c *StandardIOConnection) WriteLine(s string) error {
-	_, err := c.rw.WriteString(s + "\n")
+	_, err := c.rw.WriteString(s)
 	if err != nil {
 		return err
 	}
