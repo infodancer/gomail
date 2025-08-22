@@ -66,9 +66,13 @@ func (c *StandardIOConnection) ReadLine() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Many early protocols specify CRLF, so for convenience...
-	if s[len(s)-1] == '\r' {
-		return s[0 : len(s)-2], nil
+	// Remove trailing newline
+	if len(s) > 0 && s[len(s)-1] == '\n' {
+		s = s[:len(s)-1]
+	}
+	// Remove trailing carriage return (for CRLF line endings)
+	if len(s) > 0 && s[len(s)-1] == '\r' {
+		s = s[:len(s)-1]
 	}
 	return s, nil
 }
