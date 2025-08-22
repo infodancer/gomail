@@ -28,8 +28,12 @@ func TestStandardIOConnection_GetProto(t *testing.T) {
 	require.NoError(t, err)
 	
 	// Test with environment variable set
-	os.Setenv("PROTO", "tcp")
-	defer os.Unsetenv("PROTO")
+	err = os.Setenv("PROTO", "tcp")
+	require.NoError(t, err, "should set PROTO environment variable")
+	defer func() {
+		err := os.Unsetenv("PROTO")
+		require.NoError(t, err, "should unset PROTO environment variable")
+	}()
 	
 	assert.Equal(t, "tcp", conn.GetProto(), "should return PROTO environment variable")
 }
@@ -39,8 +43,12 @@ func TestStandardIOConnection_GetTCPLocalIP(t *testing.T) {
 	require.NoError(t, err)
 	
 	testIP := "127.0.0.1"
-	os.Setenv("TCPLOCALIP", testIP)
-	defer os.Unsetenv("TCPLOCALIP")
+	err = os.Setenv("TCPLOCALIP", testIP)
+	require.NoError(t, err, "should set TCPLOCALIP environment variable")
+	defer func() {
+		err := os.Unsetenv("TCPLOCALIP")
+		require.NoError(t, err, "should unset TCPLOCALIP environment variable")
+	}()
 	
 	assert.Equal(t, testIP, conn.GetTCPLocalIP(), "should return TCPLOCALIP environment variable")
 }
@@ -50,8 +58,12 @@ func TestStandardIOConnection_GetTCPLocalPort(t *testing.T) {
 	require.NoError(t, err)
 	
 	testPort := "25"
-	os.Setenv("TCPLOCALPORT", testPort)
-	defer os.Unsetenv("TCPLOCALPORT")
+	err = os.Setenv("TCPLOCALPORT", testPort)
+	require.NoError(t, err, "should set TCPLOCALPORT environment variable")
+	defer func() {
+		err := os.Unsetenv("TCPLOCALPORT")
+		require.NoError(t, err, "should unset TCPLOCALPORT environment variable")
+	}()
 	
 	assert.Equal(t, testPort, conn.GetTCPLocalPort(), "should return TCPLOCALPORT environment variable")
 }
@@ -61,8 +73,12 @@ func TestStandardIOConnection_GetTCPLocalHost(t *testing.T) {
 	require.NoError(t, err)
 	
 	testHost := "localhost"
-	os.Setenv("TCOLOCALHOST", testHost)
-	defer os.Unsetenv("TCOLOCALHOST")
+	err = os.Setenv("TCOLOCALHOST", testHost)
+	require.NoError(t, err, "should set TCOLOCALHOST environment variable")
+	defer func() {
+		err := os.Unsetenv("TCOLOCALHOST")
+		require.NoError(t, err, "should unset TCOLOCALHOST environment variable")
+	}()
 	
 	assert.Equal(t, testHost, conn.GetTCPLocalHost(), "should return TCOLOCALHOST environment variable")
 }
@@ -72,8 +88,12 @@ func TestStandardIOConnection_GetTCPRemotePort(t *testing.T) {
 	require.NoError(t, err)
 	
 	testPort := "12345"
-	os.Setenv("TCPREMOTEPORT", testPort)
-	defer os.Unsetenv("TCPREMOTEPORT")
+	err = os.Setenv("TCPREMOTEPORT", testPort)
+	require.NoError(t, err, "should set TCPREMOTEPORT environment variable")
+	defer func() {
+		err := os.Unsetenv("TCPREMOTEPORT")
+		require.NoError(t, err, "should unset TCPREMOTEPORT environment variable")
+	}()
 	
 	assert.Equal(t, testPort, conn.GetTCPRemotePort(), "should return TCPREMOTEPORT environment variable")
 }
@@ -83,8 +103,12 @@ func TestStandardIOConnection_GetTCPRemoteIP(t *testing.T) {
 	require.NoError(t, err)
 	
 	testIP := "192.168.1.100"
-	os.Setenv("TCPREMOTEIP", testIP)
-	defer os.Unsetenv("TCPREMOTEIP")
+	err = os.Setenv("TCPREMOTEIP", testIP)
+	require.NoError(t, err, "should set TCPREMOTEIP environment variable")
+	defer func() {
+		err := os.Unsetenv("TCPREMOTEIP")
+		require.NoError(t, err, "should unset TCPREMOTEIP environment variable")
+	}()
 	
 	assert.Equal(t, testIP, conn.GetTCPRemoteIP(), "should return TCPREMOTEIP environment variable")
 }
@@ -94,8 +118,12 @@ func TestStandardIOConnection_GetTCPRemoteHost(t *testing.T) {
 	require.NoError(t, err)
 	
 	testHost := "client.example.com"
-	os.Setenv("TCPREMOTEHOST", testHost)
-	defer os.Unsetenv("TCPREMOTEHOST")
+	err = os.Setenv("TCPREMOTEHOST", testHost)
+	require.NoError(t, err, "should set TCPREMOTEHOST environment variable")
+	defer func() {
+		err := os.Unsetenv("TCPREMOTEHOST")
+		require.NoError(t, err, "should unset TCPREMOTEHOST environment variable")
+	}()
 	
 	assert.Equal(t, testHost, conn.GetTCPRemoteHost(), "should return TCPREMOTEHOST environment variable")
 }
@@ -117,7 +145,8 @@ func TestStandardIOConnection_EnvironmentVariables_Empty(t *testing.T) {
 		"TCPREMOTEPORT", "TCPREMOTEIP", "TCPREMOTEHOST"}
 	
 	for _, envVar := range envVars {
-		os.Unsetenv(envVar)
+		err := os.Unsetenv(envVar)
+		require.NoError(t, err, "should unset %s environment variable", envVar)
 	}
 	
 	// All should return empty strings when environment variables are not set
