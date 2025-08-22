@@ -18,7 +18,7 @@ type TCPConnection interface {
 	GetTCPRemotePort() string
 	GetTCPRemoteIP() string
 	GetTCPRemoteHost() string
-	// IsSecure returns true if the connection is encrypted
+	// IsEncrypted returns true if the connection is encrypted
 	IsEncrypted() bool
 	Logger() *log.Logger
 }
@@ -55,7 +55,7 @@ func (c *StandardIOConnection) Logger() *log.Logger {
 	return c.logger
 }
 
-// IsEncrypted indicates whethe the connection is encrypted (but not authenticated)
+// IsEncrypted indicates whethe the connection is encrypted (but not necessarily authenticated)
 // Stubbed for now
 func (c *StandardIOConnection) IsEncrypted() bool {
 	return true
