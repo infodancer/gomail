@@ -60,7 +60,7 @@ func (s *Session) Println(v ...any) error {
 func (s *Session) HandleConnection() error {
 	defer func() {
 		if err := s.Conn.Close(); err != nil {
-			s.Conn.Logger().Printf("error: %s", err)
+			s.Conn.Logger().Printf("error closing connection: %s", err)
 		}
 	}()
 	for {
@@ -448,18 +448,18 @@ func (s *Session) checkSpam() (string, error) {
 		cmd := exec.Command(s.Config.Spamc)
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
-			log.Fatal(err)
+			return "", err
 		}
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			log.Fatal(err)
+			return "", err
 		}
 
 		if err := s.Printf("Executing spamc: %v", s.Config.Spamc); err != nil {
 			s.Conn.Logger().Print(err)
 		}
 		if err := cmd.Start(); err != nil {
-			log.Fatal(err)
+			return "", err
 		}
 
 		if err := s.Printf("Beginning output processing: %v", s.Config.Spamc); err != nil {
@@ -476,16 +476,16 @@ func (s *Session) checkSpam() (string, error) {
 		// Write and flush
 		l, err := spamwriter.WriteString(s.Data)
 		if err != nil {
-			log.Fatal(err)
+			return "", err
 		}
 		if err := s.Printf("Wrote %v bytes of %v to spamwriter", l, len(s.Data)); err != nil {
 			s.Conn.Logger().Print(err)
 		}
 		if err := spamwriter.Flush(); err != nil {
-			s.Conn.Logger().Print(err)
+			s.Conn.Logger().Printf("error flushing spamwriter: %s", err)
 		}
 		if err := stdin.Close(); err != nil {
-			s.Conn.Logger().Print(err)
+			s.Conn.Logger().Printf("error closing stdin: %s", err)
 		}
 		if err := s.Printf("Message written to spamc"); err != nil {
 			s.Conn.Logger().Print(err)
@@ -508,7 +508,7 @@ func (s *Session) checkSpam() (string, error) {
 		}
 
 		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
+			return "", err
 		}
 
 		if err := s.Printf("Waiting for spamc to exit"); err != nil {
@@ -516,7 +516,6 @@ func (s *Session) checkSpam() (string, error) {
 		}
 		err = cmd.Wait()
 		if err != nil {
-			log.Fatal(err)
 			return "", err
 		}
 		return result, nil
