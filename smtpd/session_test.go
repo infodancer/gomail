@@ -5,9 +5,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-
-	"github.com/infodancer/gomail/connect"
-	"github.com/infodancer/gomail/queue"
 )
 
 // MockConnection implements connect.TCPConnection for testing
@@ -57,6 +54,10 @@ func (m *MockConnection) GetTCPRemotePort() string {
 
 func (m *MockConnection) GetTCPRemoteIP() string {
 	return "192.168.1.100"
+}
+
+func (m *MockConnection) GetTCPRemoteHost() string {
+	return "client.example.com"
 }
 
 func (m *MockConnection) Logger() interface{} {
