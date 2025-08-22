@@ -29,6 +29,7 @@ func main() {
 		log.Printf("error reading configuration: %v", err)
 		os.Exit(1)
 	}
+
 	var c connect.TCPConnection
 	c, err = connect.NewStandardIOConnection()
 	if err != nil {
