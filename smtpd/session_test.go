@@ -1,6 +1,7 @@
 package smtpd
 
 import (
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -64,8 +65,8 @@ func (m *MockConnection) IsEncrypted() bool {
 	return false
 }
 
-func (m *MockConnection) Logger() interface{} {
-	return nil
+func (m *MockConnection) Logger() *log.Logger {
+	return log.New(os.Stderr, "mock: ", log.LstdFlags)
 }
 
 func createTestSession() *Session {
