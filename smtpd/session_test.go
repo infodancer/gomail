@@ -145,7 +145,9 @@ cat
 	if _, err := tmpFile.WriteString(tmpScript); err != nil {
 		t.Skip("Cannot write to temporary file for test")
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		t.Skip("Cannot close temporary file for test")
+	}
 
 	if err := os.Chmod(tmpFile.Name(), 0755); err != nil {
 		t.Skip("Cannot make temporary file executable")
