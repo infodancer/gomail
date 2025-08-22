@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/infodancer/gomail/config"
 	"github.com/infodancer/gomail/connect"
+
 	"github.com/infodancer/gomail/smtpd"
 )
 
@@ -21,7 +23,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := smtpd.ReadConfigFile(*cfgfile)
+	var cfg smtpd.Config
+	err := config.LoadTOMLConfig(*cfgfile, cfg)
 	if err != nil {
 		log.Println("error reading configuration: %w", err)
 		os.Exit(1)
