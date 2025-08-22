@@ -72,8 +72,19 @@ func (s *Session) HandleConnection() error {
 			if err := s.Println("io error reading from connection"); err != nil {
 				s.Conn.Logger().Printf("error: %s", err)
 			}
+			break
 		}
-		s.HandleInputLine(line)
+		code, message, finished := s.HandleInputLine(line)
+		err = s.SendCodeLine(code, message)
+		if err != nil {
+			if err := s.Println("io error sending response"); err != nil {
+				s.Conn.Logger().Printf("error: %s", err)
+			}
+			break
+		}
+		if finished {
+			break
+		}
 	}
 	return nil
 }

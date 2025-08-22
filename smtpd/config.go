@@ -22,7 +22,11 @@ func (cfg *Config) Start(c connect.TCPConnection) (*Session, error) {
 		Config: *cfg,
 		Conn:   c,
 	}
-	err := s.SendCodeLine(220, cfg.ServerName+" "+cfg.Banner)
+	banner := cfg.Banner
+	if banner == "" {
+		banner = "SMTP Server Ready"
+	}
+	err := s.SendCodeLine(220, cfg.ServerName+" "+banner)
 	if err != nil {
 		return nil, err
 	}
