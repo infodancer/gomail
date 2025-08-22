@@ -136,7 +136,11 @@ cat
 	if err != nil {
 		t.Skip("Cannot create temporary file for test")
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			t.Logf("Warning: failed to remove temporary file %s: %v", tmpFile.Name(), err)
+		}
+	}()
 
 	if _, err := tmpFile.WriteString(tmpScript); err != nil {
 		t.Skip("Cannot write to temporary file for test")
