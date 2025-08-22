@@ -24,7 +24,7 @@ func main() {
 	}
 
 	var cfg smtpd.Config
-	err := config.LoadTOMLConfig(*cfgfile, cfg)
+	err := config.LoadTOMLConfig(*cfgfile, &cfg)
 	if err != nil {
 		log.Println("error reading configuration: %w", err)
 		os.Exit(1)
