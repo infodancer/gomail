@@ -10,10 +10,11 @@ type Config struct {
 	// Embed the common server configuration
 	config.ServerConfig `toml:"server"`
 	// SMTP-specific configuration
-	Banner  string `toml:"banner"`
-	Spamc   string `toml:"spamc"`
-	Maxsize int64  `toml:"maxsize"`
-	MQueue  *queue.Queue
+	Banner        string `toml:"banner"`
+	Spamc         string `toml:"spamc"`
+	Maxsize       int64  `toml:"maxsize"`
+	MaxRecipients int    `toml:"max_recipients"`
+	MQueue        *queue.Queue
 }
 
 // Start accepts a connection and sends the configured banner
