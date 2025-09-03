@@ -1,0 +1,19 @@
+[server]
+server_name = "test.example.com"
+
+[server.listener]
+ip_address = ""
+port = 25
+max_connections = 10
+idle_timeout = 300
+
+[server.tls]
+enabled = false
+cert_file = ""
+key_file = ""
+require_client_cert = false
+
+banner = "220 test.example.com ESMTP"
+spamc = ""
+maxsize = 1048576
+max_recipients = 10

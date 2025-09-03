@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# SMTP Test Script
+# This script tests the smtpd server by sending a simple test message
+
+set -e  # Exit on any error
+
+# Configuration
+SMTPD_CMD="go run cmd/smtpd/smtpd.go -cfg etc/smtpd-test.toml"
+TEST_FROM="test@example.com"
+TEST_TO="recipient@example.com"
+TEST_SUBJECT="Test Message"
+TEST_BODY="This is a test message from the SMTP test script."
+
+echo "Starting SMTP test..."
+
+# Create test domain structure
+TEST_DOMAIN_ROOT="/tmp/test-domains"
+TEST_QUEUE_DIR="/tmp/test-queue"
+export DOMAIN_ROOT="$TEST_DOMAIN_ROOT"
+export QUEUE_DIR="$TEST_QUEUE_DIR"
+mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/new"
+mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/cur"
+mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/tmp"
+
+# Clean up test domains and queue on exit
+trap "rm -rf $TEST_DOMAIN_ROOT $TEST_QUEUE_DIR" EXIT
+
+# Create a temporary file with SMTP commands
+SMTP_COMMANDS=$(mktemp)
+trap "rm -f $SMTP_COMMANDS; rm -rf $TEST_DOMAIN_ROOT $TEST_QUEUE_DIR" EXIT
+
+cat > "$SMTP_COMMANDS" << EOF
+EHLO test.example.com
+MAIL FROM:<$TEST_FROM>
+RCPT TO:<$TEST_TO>
+DATA
+Subject: $TEST_SUBJECT
+From: $TEST_FROM
+To: $TEST_TO
+
+$TEST_BODY
+.
+QUIT
+EOF
+
+echo "Sending test message..."
+echo "From: $TEST_FROM"
+echo "To: $TEST_TO"
+echo "Subject: $TEST_SUBJECT"
+echo ""
+
+# Run the SMTP server with our test commands
+if $SMTPD_CMD < "$SMTP_COMMANDS" 2>&1; then
+    echo "✓ SMTP test completed successfully"
+    exit 0
+else
+    echo "✗ SMTP test failed with exit code $?"
+    exit 1
+fi

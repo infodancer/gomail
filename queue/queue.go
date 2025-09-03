@@ -63,10 +63,12 @@ func CreateQueue(path string) (*Queue, error) {
 			if err != nil {
 				return nil, err
 			}
-			_, err = os.Stat(path)
+			fi, err = os.Stat(path)
 			if err != nil {
 				return nil, err
 			}
+		} else {
+			return nil, err
 		}
 	}
 	if !fi.IsDir() {
