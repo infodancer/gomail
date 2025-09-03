@@ -14,9 +14,19 @@ TEST_BODY="This is a test message from the SMTP test script."
 
 echo "Starting SMTP test..."
 
+# Create test domain structure
+TEST_DOMAIN_ROOT="/tmp/test-domains"
+export DOMAIN_ROOT="$TEST_DOMAIN_ROOT"
+mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/new"
+mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/cur"
+mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/tmp"
+
+# Clean up test domains on exit
+trap "rm -rf $TEST_DOMAIN_ROOT" EXIT
+
 # Create a temporary file with SMTP commands
 SMTP_COMMANDS=$(mktemp)
-trap "rm -f $SMTP_COMMANDS" EXIT
+trap "rm -f $SMTP_COMMANDS; rm -rf $TEST_DOMAIN_ROOT" EXIT
 
 cat > "$SMTP_COMMANDS" << EOF
 EHLO test.example.com

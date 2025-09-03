@@ -34,7 +34,10 @@ var domainPattern *regexp.Regexp
 
 func init() {
 	var err error
-	domainRoot = "/srv/domains"
+	domainRoot = os.Getenv("DOMAIN_ROOT")
+	if domainRoot == "" {
+		domainRoot = "/srv/domains"
+	}
 	logger = log.New(os.Stderr, "", 0)
 	domainPattern, err = regexp.Compile(validateDomainPattern)
 	if err != nil {
