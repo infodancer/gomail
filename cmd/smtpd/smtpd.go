@@ -60,4 +60,6 @@ func main() {
 		log.Println("error handling connection")
 		os.Exit(3)
 	}
+	// Exit normally when connection is done (e.g., after QUIT command)
+	os.Exit(0)
 }
