@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strconv"
 	"sync"
 
 	"github.com/infodancer/gomail/config"
