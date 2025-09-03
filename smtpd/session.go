@@ -415,6 +415,7 @@ func (s *Session) processDATA(line string) (int, string, bool) {
 		if err := s.Printf("Appended %d bytes to existing %d bytes in session.Data\n", len(line), len(s.Data)); err != nil {
 			s.Conn.Logger().Print(err)
 		}
+		oldLen := len(s.Data)
 		s.Data += line
 		s.Data += "\n"
 		if err := s.Printf("New session.Data is %d bytes\n", len(s.Data)); err != nil {
