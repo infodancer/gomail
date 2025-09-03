@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -101,10 +102,53 @@ func startListener(cfgfile string) {
 
 	// Start listening
 	address := fmt.Sprintf("%s:%d", serverConfig.Listener.IPAddress, serverConfig.Listener.Port)
-	listener, err := net.Listen("tcp", address)
-	if err != nil {
-		log.Printf("error starting listener on %s for config %s: %v", address, cfgfile, err)
-		return
+	var listener net.Listener
+	
+	if serverConfig.TLS.Enabled {
+		// Load TLS certificate and key
+		cert, err := tls.LoadX509KeyPair(serverConfig.TLS.CertFile, serverConfig.TLS.KeyFile)
+		if err != nil {
+			log.Printf("error loading TLS certificate for %s: %v", cfgfile, err)
+			return
+		}
+		
+		// Configure TLS
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+		
+		// Set minimum TLS version if specified
+		switch serverConfig.TLS.MinTLSVersion {
+		case "1.0":
+			tlsConfig.MinVersion = tls.VersionTLS10
+		case "1.1":
+			tlsConfig.MinVersion = tls.VersionTLS11
+		case "1.2":
+			tlsConfig.MinVersion = tls.VersionTLS12
+		case "1.3":
+			tlsConfig.MinVersion = tls.VersionTLS13
+		default:
+			tlsConfig.MinVersion = tls.VersionTLS12 // Default to TLS 1.2
+		}
+		
+		// Set client certificate requirements
+		if serverConfig.TLS.RequireClientCert {
+			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		}
+		
+		listener, err = tls.Listen("tcp", address, tlsConfig)
+		if err != nil {
+			log.Printf("error starting TLS listener on %s for config %s: %v", address, cfgfile, err)
+			return
+		}
+		log.Printf("listening on %s with TLS (config: %s), running command: %s %v", address, cfgfile, command, args)
+	} else {
+		listener, err = net.Listen("tcp", address)
+		if err != nil {
+			log.Printf("error starting listener on %s for config %s: %v", address, cfgfile, err)
+			return
+		}
+		log.Printf("listening on %s (config: %s), running command: %s %v", address, cfgfile, command, args)
 	}
 	defer func() {
 		if err := listener.Close(); err != nil {
@@ -112,7 +156,6 @@ func startListener(cfgfile string) {
 		}
 	}()
 
-	log.Printf("listening on %s (config: %s), running command: %s %v", address, cfgfile, command, args)
 
 	// Handle connections
 	var connWg sync.WaitGroup
