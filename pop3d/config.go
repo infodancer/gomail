@@ -1,35 +1,28 @@
 package pop3d
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-
+	"github.com/infodancer/gomail/config"
 	"github.com/infodancer/gomail/connect"
 )
 
 type Config struct {
-	ServerName string `json:"servername"`
-}
-
-func ReadConfigFile(file string) (*Config, error) {
-	c := Config{}
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return nil, fmt.Errorf("error reading pop3d config from %s: %w", file, err)
-	}
-
-	err = json.Unmarshal(data, &c)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling pop3d config from %s: %w", file, err)
-	}
-	return &c, nil
+	// Embed the common server configuration
+	config.ServerConfig `toml:"server"`
+	// POP3-specific configuration
+	Banner string `toml:"banner"`
 }
 
 // Start sends the banner for new connections
-func (cfg *Config) Start(c *connect.TCPConnection) (*Session, error) {
-	s := Session{}
-	err := s.SendLine("+OK " + cfg.ServerName + " POP3 server ready")
+func (cfg *Config) Start(c connect.TCPConnection) (*Session, error) {
+	s := Session{
+		Config: *cfg,
+		Conn:   c,
+	}
+	banner := cfg.Banner
+	if banner == "" {
+		banner = cfg.ServerName + " POP3 server ready"
+	}
+	err := s.SendLine("+OK " + banner)
 	if err != nil {
 		return nil, err
 	}
