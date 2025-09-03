@@ -24,8 +24,8 @@ type GenericConfig struct {
 	// Server contains the server configuration
 	Server config.ServerConfig `toml:"server"`
 	// Legacy fields for configs that don't use nested server structure
-	ServerName string `toml:"server_name"`
-	Listener   config.Listener `toml:"listener"`
+	ServerName string                  `toml:"server_name"`
+	Listener   config.Listener         `toml:"listener"`
 	TLS        config.SecureConnection `toml:"tls"`
 }
 
@@ -87,18 +87,6 @@ func startListener(cfgfile string) {
 		// Explicit command specified (listener config)
 		command = cfg.Command
 		args = cfg.Args
-	} else {
-		// Infer command from config file name
-		if cfgfile == "etc/smtpd.toml" {
-			command = "./bin/smtpd"
-			args = []string{"-cfg", cfgfile}
-		} else if cfgfile == "etc/pop3d.toml" {
-			command = "./bin/pop3d"
-			args = []string{"-cfg", cfgfile}
-		} else {
-			log.Printf("error: cannot determine command for config %s", cfgfile)
-			return
-		}
 	}
 
 	// Start listening
@@ -164,14 +152,14 @@ func handleConnection(conn net.Conn, command string, args []string) {
 
 	// Start the configured command
 	cmd := exec.Command(command, args...)
-	
+
 	// Get pipes for stdin/stdout
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		log.Printf("error creating stdin pipe: %v", err)
 		return
 	}
-	
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Printf("error creating stdout pipe: %v", err)
@@ -206,7 +194,7 @@ func handleConnection(conn net.Conn, command string, args []string) {
 				log.Printf("error closing stdin: %v", err)
 			}
 		}()
-		
+
 		reader := bufio.NewReader(conn)
 		for {
 			line, err := reader.ReadString('\n')
@@ -216,7 +204,7 @@ func handleConnection(conn net.Conn, command string, args []string) {
 				}
 				break
 			}
-			
+
 			_, err = stdin.Write([]byte(line))
 			if err != nil {
 				log.Printf("error writing to command stdin: %v", err)
@@ -233,7 +221,7 @@ func handleConnection(conn net.Conn, command string, args []string) {
 				log.Printf("error closing connection: %v", err)
 			}
 		}()
-		
+
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text() + "\n"
@@ -243,7 +231,7 @@ func handleConnection(conn net.Conn, command string, args []string) {
 				break
 			}
 		}
-		
+
 		if err := scanner.Err(); err != nil {
 			log.Printf("error reading from command stdout: %v", err)
 		}
