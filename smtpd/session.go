@@ -387,11 +387,11 @@ func (s *Session) processDATA(line string) (int, string, bool) {
 			} else {
 				// Check with spamc if needed
 				if len(s.Config.Spamc) > 0 {
-					err = s.Printf("session.Data is %v bytes", len(s.Data))
+					err = s.Printf("session.Data is %d bytes", len(s.Data))
 					if err != nil {
 						return 451, "i/o error", false
 					}
-					err = s.Printf("session.Data:\n%v", s.Data)
+					err = s.Printf("session.Data:\n%s", s.Data)
 					if err != nil {
 						return 451, "i/o error", false
 					}
@@ -412,12 +412,12 @@ func (s *Session) processDATA(line string) (int, string, bool) {
 				return 250, "message accepted for delivery", false
 			}
 		}
-		if err := s.Printf("Appended %v bytes to existing %v bytes in session.Data", len(line), len(s.Data)); err != nil {
+		if err := s.Printf("Appended %d bytes to existing %d bytes in session.Data", len(line), len(s.Data)); err != nil {
 			s.Conn.Logger().Print(err)
 		}
 		s.Data += line
 		s.Data += "\n"
-		if err := s.Printf("New session.Data is %v bytes", len(s.Data)); err != nil {
+		if err := s.Printf("New session.Data is %d bytes", len(s.Data)); err != nil {
 			s.Conn.Logger().Print(err)
 		}
 	}

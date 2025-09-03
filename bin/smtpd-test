@@ -16,17 +16,19 @@ echo "Starting SMTP test..."
 
 # Create test domain structure
 TEST_DOMAIN_ROOT="/tmp/test-domains"
+TEST_QUEUE_DIR="/tmp/test-queue"
 export DOMAIN_ROOT="$TEST_DOMAIN_ROOT"
+export QUEUE_DIR="$TEST_QUEUE_DIR"
 mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/new"
 mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/cur"
 mkdir -p "$TEST_DOMAIN_ROOT/example.com/users/recipient/Maildir/tmp"
 
-# Clean up test domains on exit
-trap "rm -rf $TEST_DOMAIN_ROOT" EXIT
+# Clean up test domains and queue on exit
+trap "rm -rf $TEST_DOMAIN_ROOT $TEST_QUEUE_DIR" EXIT
 
 # Create a temporary file with SMTP commands
 SMTP_COMMANDS=$(mktemp)
-trap "rm -f $SMTP_COMMANDS; rm -rf $TEST_DOMAIN_ROOT" EXIT
+trap "rm -f $SMTP_COMMANDS; rm -rf $TEST_DOMAIN_ROOT $TEST_QUEUE_DIR" EXIT
 
 cat > "$SMTP_COMMANDS" << EOF
 EHLO test.example.com

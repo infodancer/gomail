@@ -33,7 +33,15 @@ func main() {
 
 	// Initialize the mail queue if not set
 	if cfg.MQueue == nil {
-		cfg.MQueue = &queue.Queue{}
+		queueDir := os.Getenv("QUEUE_DIR")
+		if queueDir == "" {
+			queueDir = "/tmp/test-queue"
+		}
+		cfg.MQueue, err = queue.GetQueue(queueDir)
+		if err != nil {
+			log.Printf("error initializing queue: %v", err)
+			os.Exit(1)
+		}
 	}
 
 	var c connect.TCPConnection
