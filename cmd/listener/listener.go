@@ -207,33 +207,58 @@ func handleConnection(conn net.Conn, command string, args []string) {
 		return
 	}
 
+	// Create channels to signal when goroutines should stop
+	stopReading := make(chan struct{})
+	stopWriting := make(chan struct{})
+	
 	// Create a wait group for the goroutines
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3) // Add one more for the command monitor
+
+	// Monitor the command and signal when it exits
+	go func() {
+		defer wg.Done()
+		err := cmd.Wait()
+		if err != nil {
+			log.Printf("command exited with error: %v", err)
+		} else {
+			log.Printf("command completed successfully")
+		}
+		// Signal both goroutines to stop
+		close(stopReading)
+		close(stopWriting)
+	}()
 
 	// Copy from network connection to command stdin
 	go func() {
 		defer wg.Done()
 		defer func() {
-			if err := stdin.Close(); err != nil {
+			if err := stdin.Close(); err != nil && !isConnectionClosed(err) {
 				log.Printf("error closing stdin: %v", err)
 			}
 		}()
 
 		reader := bufio.NewReader(conn)
 		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err != io.EOF && !isConnectionClosed(err) {
-					log.Printf("error reading from connection: %v", err)
+			select {
+			case <-stopReading:
+				return
+			default:
+				line, err := reader.ReadString('\n')
+				if err != nil {
+					if err != io.EOF && !isConnectionClosed(err) {
+						log.Printf("error reading from connection: %v", err)
+					}
+					return
 				}
-				break
-			}
 
-			_, err = stdin.Write([]byte(line))
-			if err != nil {
-				log.Printf("error writing to command stdin: %v", err)
-				break
+				_, err = stdin.Write([]byte(line))
+				if err != nil {
+					if !isConnectionClosed(err) {
+						log.Printf("error writing to command stdin: %v", err)
+					}
+					return
+				}
 			}
 		}
 	}()
@@ -243,32 +268,31 @@ func handleConnection(conn net.Conn, command string, args []string) {
 		defer wg.Done()
 
 		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			line := scanner.Text() + "\n"
-			_, err := conn.Write([]byte(line))
-			if err != nil {
-				if !isConnectionClosed(err) {
-					log.Printf("error writing to connection: %v", err)
+		for {
+			select {
+			case <-stopWriting:
+				return
+			default:
+				if !scanner.Scan() {
+					if err := scanner.Err(); err != nil {
+						log.Printf("error reading from command stdout: %v", err)
+					}
+					return
 				}
-				break
+				line := scanner.Text() + "\n"
+				_, err := conn.Write([]byte(line))
+				if err != nil {
+					if !isConnectionClosed(err) {
+						log.Printf("error writing to connection: %v", err)
+					}
+					return
+				}
 			}
-		}
-
-		if err := scanner.Err(); err != nil {
-			log.Printf("error reading from command stdout: %v", err)
 		}
 	}()
 
-	// Wait for both goroutines to finish
+	// Wait for all goroutines to finish
 	wg.Wait()
-
-	// Wait for the command to finish
-	err = cmd.Wait()
-	if err != nil {
-		log.Printf("command exited with error: %v", err)
-	} else {
-		log.Printf("command completed successfully")
-	}
 
 	log.Printf("connection from %s closed", conn.RemoteAddr())
 }
