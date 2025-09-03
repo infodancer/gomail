@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/infodancer/gomail/config"
 	"github.com/infodancer/gomail/connect"
 	"github.com/infodancer/gomail/pop3d"
 )
@@ -21,9 +22,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := pop3d.ReadConfigFile(*cfgfile)
+	var cfg pop3d.Config
+	err := config.LoadTOMLConfig(*cfgfile, &cfg)
 	if err != nil {
-		log.Println("error reading configuration: %w", err)
+		log.Printf("error reading configuration: %v", err)
 		os.Exit(1)
 	}
 	var c connect.TCPConnection
@@ -32,8 +34,7 @@ func main() {
 		log.Println("error creating new StandardIOConnection")
 		os.Exit(1)
 	}
-	var s *pop3d.Session
-	s, err = cfg.Start(&c)
+	s, err := cfg.Start(c)
 	if err != nil {
 		log.Println("error sending greeting")
 		os.Exit(2)
