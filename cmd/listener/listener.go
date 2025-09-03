@@ -73,14 +73,8 @@ func startListener(cfgfile string) {
 	if cfg.Server.ServerName != "" {
 		// Use nested server configuration
 		serverConfig = cfg.Server
-	} else {
-		// Use legacy flat configuration
-		serverConfig.ServerName = cfg.ServerName
-		serverConfig.Listener = cfg.Listener
-		serverConfig.TLS = cfg.TLS
 	}
 
-	// Determine command to run
 	var command string
 	var args []string
 	if cfg.Command != "" {
