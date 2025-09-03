@@ -55,7 +55,11 @@ func main() {
 		log.Printf("error starting listener on %s: %v", address, err)
 		os.Exit(1)
 	}
-	defer listener.Close()
+	defer func() {
+		if err := listener.Close(); err != nil {
+			log.Printf("error closing listener: %v", err)
+		}
+	}()
 
 	log.Printf("listening on %s, running command: %s", address, cfg.Command)
 
@@ -73,7 +77,9 @@ func main() {
 		// Check max connections limit
 		if cfg.Server.Listener.MaxConnections > 0 && connectionCount >= cfg.Server.Listener.MaxConnections {
 			log.Printf("maximum connections (%d) reached, rejecting connection", cfg.Server.Listener.MaxConnections)
-			conn.Close()
+			if err := conn.Close(); err != nil {
+				log.Printf("error closing rejected connection: %v", err)
+			}
 			continue
 		}
 
@@ -84,7 +90,9 @@ func main() {
 			defer wg.Done()
 			defer func() {
 				connectionCount--
-				c.Close()
+				if err := c.Close(); err != nil {
+					log.Printf("error closing connection: %v", err)
+				}
 			}()
 
 			handleConnection(c, cfg)
@@ -108,7 +116,9 @@ func handleConnection(conn net.Conn, cfg ListenerConfig) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Printf("error creating stdout pipe: %v", err)
-		stdin.Close()
+		if closeErr := stdin.Close(); closeErr != nil {
+			log.Printf("error closing stdin pipe: %v", closeErr)
+		}
 		return
 	}
 
@@ -116,8 +126,12 @@ func handleConnection(conn net.Conn, cfg ListenerConfig) {
 	err = cmd.Start()
 	if err != nil {
 		log.Printf("error starting command: %v", err)
-		stdin.Close()
-		stdout.Close()
+		if closeErr := stdin.Close(); closeErr != nil {
+			log.Printf("error closing stdin pipe: %v", closeErr)
+		}
+		if closeErr := stdout.Close(); closeErr != nil {
+			log.Printf("error closing stdout pipe: %v", closeErr)
+		}
 		return
 	}
 
@@ -128,7 +142,11 @@ func handleConnection(conn net.Conn, cfg ListenerConfig) {
 	// Copy from network connection to command stdin
 	go func() {
 		defer wg.Done()
-		defer stdin.Close()
+		defer func() {
+			if err := stdin.Close(); err != nil {
+				log.Printf("error closing stdin: %v", err)
+			}
+		}()
 		
 		reader := bufio.NewReader(conn)
 		for {
@@ -151,7 +169,11 @@ func handleConnection(conn net.Conn, cfg ListenerConfig) {
 	// Copy from command stdout to network connection
 	go func() {
 		defer wg.Done()
-		defer conn.Close()
+		defer func() {
+			if err := conn.Close(); err != nil {
+				log.Printf("error closing connection: %v", err)
+			}
+		}()
 		
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
