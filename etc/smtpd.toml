@@ -12,8 +12,8 @@ ip_address = "0.0.0.0"
 port = 8025
 max_connections = 100
 idle_timeout = 300  # seconds
-command = "bin/smtpd"
-args = ["-cfg", "etc/smtpd.toml"]
+command = "go"
+args = ["run", "cmd/smtpd/smtpd.go", "-cfg", "etc/smtpd.toml"]
 
 
 [server.tls]

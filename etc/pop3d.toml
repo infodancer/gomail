@@ -8,8 +8,8 @@ ip_address = "0.0.0.0"
 port = 8110
 max_connections = 50
 idle_timeout = 600  # seconds
-command = "bin/pop3d"
-args = ["-cfg", "etc/pop3d.toml"]
+command = "go"
+args = ["run", "cmd/pop3d/pop3d.go", "-cfg", "etc/pop3d.toml"]
 
 
 [server.tls]
