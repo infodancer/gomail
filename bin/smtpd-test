@@ -19,7 +19,7 @@ SMTP_COMMANDS=$(mktemp)
 trap "rm -f $SMTP_COMMANDS" EXIT
 
 cat > "$SMTP_COMMANDS" << EOF
-HELO test.example.com
+EHLO test.example.com
 MAIL FROM:<$TEST_FROM>
 RCPT TO:<$TEST_TO>
 DATA
