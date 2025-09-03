@@ -6,7 +6,7 @@
 set -e  # Exit on any error
 
 # Configuration
-SMTPD_CMD="go run cmd/smtpd/smtpd.go"
+SMTPD_CMD="go run cmd/smtpd/smtpd.go -cfg etc/smtpd-test.toml"
 TEST_FROM="test@example.com"
 TEST_TO="recipient@example.com"
 TEST_SUBJECT="Test Message"
