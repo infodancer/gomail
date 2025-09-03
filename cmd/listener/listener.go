@@ -129,6 +129,12 @@ func startListener(cfgfile string) {
 		connectionCount++
 		connCountMutex.Unlock()
 
+		// Output connection info to stdout
+		localAddr := c.LocalAddr().(*net.TCPAddr)
+		remoteAddr := c.RemoteAddr().(*net.TCPAddr)
+		fmt.Printf("Connection accepted: server=%s local_port=%d remote_ip=%s remote_port=%d\n",
+			serverConfig.ServerName, localAddr.Port, remoteAddr.IP.String(), remoteAddr.Port)
+
 		connWg.Add(1)
 
 		go func(c net.Conn) {
