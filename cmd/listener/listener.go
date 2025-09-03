@@ -87,6 +87,12 @@ func startListener(cfgfile string) {
 		args = serverConfig.Listener.Args
 	}
 
+	// Require a command to be configured
+	if command == "" {
+		log.Printf("error: no command configured in %s", cfgfile)
+		return
+	}
+
 	// Start listening
 	address := fmt.Sprintf("%s:%d", serverConfig.Listener.IPAddress, serverConfig.Listener.Port)
 	listener, err := net.Listen("tcp", address)
@@ -100,11 +106,7 @@ func startListener(cfgfile string) {
 		}
 	}()
 
-	if command != "" {
-		log.Printf("listening on %s (config: %s), running command: %s %v", address, cfgfile, command, args)
-	} else {
-		log.Printf("listening on %s (config: %s), no command configured", address, cfgfile)
-	}
+	log.Printf("listening on %s (config: %s), running command: %s %v", address, cfgfile, command, args)
 
 	// Handle connections
 	var connWg sync.WaitGroup
