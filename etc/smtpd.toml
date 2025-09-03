@@ -4,6 +4,7 @@
 server_name = "mail.example.com"
 banner = "SMTP Server Ready"
 maxsize = 10485760  # 10MB max message size
+max_recipients = 100  # Maximum number of recipients per message
 spamc = "/usr/bin/spamc"
 
 
