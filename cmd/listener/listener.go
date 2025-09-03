@@ -16,17 +16,20 @@ import (
 
 var Version string
 
-type ListenerConfig struct {
-	// Command is the command to execute for each connection
+type GenericConfig struct {
+	// Command is the command to execute for each connection (optional, for listener configs)
 	Command string `toml:"command"`
-	// Args are the arguments to pass to the command
+	// Args are the arguments to pass to the command (optional, for listener configs)
 	Args []string `toml:"args"`
 	// Server contains the server configuration
 	Server config.ServerConfig `toml:"server"`
+	// Legacy fields for configs that don't use nested server structure
+	ServerName string `toml:"server_name"`
+	Listener   config.Listener `toml:"listener"`
+	TLS        config.SecureConnection `toml:"tls"`
 }
 
 func main() {
-	cfgfile := flag.String("cfg", "/opt/infodancer/gomail/etc/listener.toml", "The configuration file")
 	versionFlag := flag.Bool("version", false, "Print the version and exit")
 	flag.Parse()
 
@@ -35,76 +38,132 @@ func main() {
 		os.Exit(0)
 	}
 
-	var cfg ListenerConfig
-	err := config.LoadTOMLConfig(*cfgfile, &cfg)
-	if err != nil {
-		log.Printf("error reading configuration: %v", err)
+	configFiles := flag.Args()
+	if len(configFiles) == 0 {
+		log.Printf("error: no configuration files specified")
+		log.Printf("usage: %s [options] config1.toml [config2.toml ...]", os.Args[0])
 		os.Exit(1)
 	}
 
-	// Validate configuration
-	if cfg.Command == "" {
-		log.Printf("error: command not specified in configuration")
-		os.Exit(1)
+	var wg sync.WaitGroup
+
+	// Start a listener for each configuration file
+	for _, cfgfile := range configFiles {
+		wg.Add(1)
+		go func(configFile string) {
+			defer wg.Done()
+			startListener(configFile)
+		}(cfgfile)
+	}
+
+	// Wait for all listeners to finish
+	wg.Wait()
+}
+
+func startListener(cfgfile string) {
+	var cfg GenericConfig
+	err := config.LoadTOMLConfig(cfgfile, &cfg)
+	if err != nil {
+		log.Printf("error reading configuration from %s: %v", cfgfile, err)
+		return
+	}
+
+	// Normalize configuration - handle both nested and legacy formats
+	var serverConfig config.ServerConfig
+	if cfg.Server.ServerName != "" {
+		// Use nested server configuration
+		serverConfig = cfg.Server
+	} else {
+		// Use legacy flat configuration
+		serverConfig.ServerName = cfg.ServerName
+		serverConfig.Listener = cfg.Listener
+		serverConfig.TLS = cfg.TLS
+	}
+
+	// Determine command to run
+	var command string
+	var args []string
+	if cfg.Command != "" {
+		// Explicit command specified (listener config)
+		command = cfg.Command
+		args = cfg.Args
+	} else {
+		// Infer command from config file name
+		if cfgfile == "etc/smtpd.toml" {
+			command = "./bin/smtpd"
+			args = []string{"-cfg", cfgfile}
+		} else if cfgfile == "etc/pop3d.toml" {
+			command = "./bin/pop3d"
+			args = []string{"-cfg", cfgfile}
+		} else {
+			log.Printf("error: cannot determine command for config %s", cfgfile)
+			return
+		}
 	}
 
 	// Start listening
-	address := fmt.Sprintf("%s:%d", cfg.Server.Listener.IPAddress, cfg.Server.Listener.Port)
+	address := fmt.Sprintf("%s:%d", serverConfig.Listener.IPAddress, serverConfig.Listener.Port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Printf("error starting listener on %s: %v", address, err)
-		os.Exit(1)
+		log.Printf("error starting listener on %s for config %s: %v", address, cfgfile, err)
+		return
 	}
 	defer func() {
 		if err := listener.Close(); err != nil {
-			log.Printf("error closing listener: %v", err)
+			log.Printf("error closing listener for %s: %v", cfgfile, err)
 		}
 	}()
 
-	log.Printf("listening on %s, running command: %s", address, cfg.Command)
+	log.Printf("listening on %s (config: %s), running command: %s", address, cfgfile, command)
 
 	// Handle connections
-	var wg sync.WaitGroup
+	var connWg sync.WaitGroup
 	connectionCount := 0
+	var connCountMutex sync.Mutex
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("error accepting connection: %v", err)
+			log.Printf("error accepting connection on %s: %v", address, err)
 			continue
 		}
 
 		// Check max connections limit
-		if cfg.Server.Listener.MaxConnections > 0 && connectionCount >= cfg.Server.Listener.MaxConnections {
-			log.Printf("maximum connections (%d) reached, rejecting connection", cfg.Server.Listener.MaxConnections)
+		connCountMutex.Lock()
+		if serverConfig.Listener.MaxConnections > 0 && connectionCount >= serverConfig.Listener.MaxConnections {
+			log.Printf("maximum connections (%d) reached for %s, rejecting connection", serverConfig.Listener.MaxConnections, address)
 			if err := conn.Close(); err != nil {
 				log.Printf("error closing rejected connection: %v", err)
 			}
+			connCountMutex.Unlock()
 			continue
 		}
-
 		connectionCount++
-		wg.Add(1)
+		connCountMutex.Unlock()
+
+		connWg.Add(1)
 
 		go func(c net.Conn) {
-			defer wg.Done()
+			defer connWg.Done()
 			defer func() {
+				connCountMutex.Lock()
 				connectionCount--
+				connCountMutex.Unlock()
 				if err := c.Close(); err != nil {
 					log.Printf("error closing connection: %v", err)
 				}
 			}()
 
-			handleConnection(c, cfg)
+			handleConnection(c, command, args)
 		}(conn)
 	}
 }
 
-func handleConnection(conn net.Conn, cfg ListenerConfig) {
+func handleConnection(conn net.Conn, command string, args []string) {
 	log.Printf("handling connection from %s", conn.RemoteAddr())
 
 	// Start the configured command
-	cmd := exec.Command(cfg.Command, cfg.Args...)
+	cmd := exec.Command(command, args...)
 	
 	// Get pipes for stdin/stdout
 	stdin, err := cmd.StdinPipe()
