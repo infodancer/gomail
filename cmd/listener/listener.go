@@ -78,9 +78,13 @@ func startListener(cfgfile string) {
 	var command string
 	var args []string
 	if cfg.Command != "" {
-		// Explicit command specified (listener config)
+		// Explicit command specified (top-level listener config)
 		command = cfg.Command
 		args = cfg.Args
+	} else if serverConfig.Listener.Command != "" {
+		// Command specified in nested listener configuration
+		command = serverConfig.Listener.Command
+		args = serverConfig.Listener.Args
 	}
 
 	// Start listening
@@ -96,7 +100,11 @@ func startListener(cfgfile string) {
 		}
 	}()
 
-	log.Printf("listening on %s (config: %s), running command: %s", address, cfgfile, command)
+	if command != "" {
+		log.Printf("listening on %s (config: %s), running command: %s %v", address, cfgfile, command, args)
+	} else {
+		log.Printf("listening on %s (config: %s), no command configured", address, cfgfile)
+	}
 
 	// Handle connections
 	var connWg sync.WaitGroup
