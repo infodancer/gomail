@@ -12,17 +12,10 @@ import (
 	"sync"
 
 	"github.com/infodancer/gomail/config"
+	"github.com/infodancer/gomail/smtpd"
 )
 
 var Version string
-
-type ListenerConfig struct {
-	config.ServerConfig
-	// Command is the command to execute for each connection
-	Command string `toml:"command"`
-	// Args are the arguments to pass to the command
-	Args []string `toml:"args"`
-}
 
 func main() {
 	cfgfile := flag.String("cfg", "/opt/infodancer/gomail/etc/listener.toml", "The configuration file")
@@ -41,14 +34,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Validate configuration
-	if cfg.Command == "" {
-		log.Printf("error: command not specified in configuration")
-		os.Exit(1)
-	}
-
 	// Start listening
-	address := fmt.Sprintf("%s:%d", cfg.Listener.IPAddress, cfg.Listener.Port)
+	address := fmt.Sprintf("%s:%d", cfg.ServerConfig.Listener.IPAddress, cfg.ServerConfig.Listener.Port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Printf("error starting listener on %s: %v", address, err)
@@ -70,8 +57,8 @@ func main() {
 		}
 
 		// Check max connections limit
-		if cfg.Listener.MaxConnections > 0 && connectionCount >= cfg.Listener.MaxConnections {
-			log.Printf("maximum connections (%d) reached, rejecting connection", cfg.Listener.MaxConnections)
+		if cfg.ServerConfig.Listener.MaxConnections > 0 && connectionCount >= cfg.ServerConfig.Listener.MaxConnections {
+			log.Printf("maximum connections (%d) reached, rejecting connection", cfg.ServerConfig.Listener.MaxConnections)
 			conn.Close()
 			continue
 		}
