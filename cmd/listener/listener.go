@@ -9,12 +9,18 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/infodancer/gomail/config"
 )
 
 var Version string
+
+// isConnectionClosed checks if an error is due to a closed network connection
+func isConnectionClosed(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "use of closed network connection")
+}
 
 type GenericConfig struct {
 	// Command is the command to execute for each connection (optional, for listener configs)
@@ -156,7 +162,7 @@ func startListener(cfgfile string) {
 				connCountMutex.Lock()
 				connectionCount--
 				connCountMutex.Unlock()
-				if err := c.Close(); err != nil {
+				if err := c.Close(); err != nil && !isConnectionClosed(err) {
 					log.Printf("error closing connection: %v", err)
 				}
 			}()
@@ -218,7 +224,7 @@ func handleConnection(conn net.Conn, command string, args []string) {
 		for {
 			line, err := reader.ReadString('\n')
 			if err != nil {
-				if err != io.EOF {
+				if err != io.EOF && !isConnectionClosed(err) {
 					log.Printf("error reading from connection: %v", err)
 				}
 				break
@@ -235,18 +241,15 @@ func handleConnection(conn net.Conn, command string, args []string) {
 	// Copy from command stdout to network connection
 	go func() {
 		defer wg.Done()
-		defer func() {
-			if err := conn.Close(); err != nil {
-				log.Printf("error closing connection: %v", err)
-			}
-		}()
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			line := scanner.Text() + "\n"
 			_, err := conn.Write([]byte(line))
 			if err != nil {
-				log.Printf("error writing to connection: %v", err)
+				if !isConnectionClosed(err) {
+					log.Printf("error writing to connection: %v", err)
+				}
 				break
 			}
 		}
