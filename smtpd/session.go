@@ -42,8 +42,16 @@ type Session struct {
 }
 
 func Create(cfg Config, conn connect.TCPConnection) *Session {
-	s := Session{Config: cfg, Conn: conn}
-
+	s := Session{
+		Config:         cfg,
+		Conn:           conn,
+		RecipientLimit: cfg.MaxRecipients,
+		maxsize:        cfg.Maxsize,
+	}
+	// Set default recipient limit if not configured
+	if s.RecipientLimit == 0 {
+		s.RecipientLimit = 100
+	}
 	return &s
 }
 

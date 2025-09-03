@@ -18,10 +18,7 @@ type Config struct {
 
 // Start accepts a connection and sends the configured banner
 func (cfg *Config) Start(c connect.TCPConnection) (*Session, error) {
-	s := &Session{
-		Config: *cfg,
-		Conn:   c,
-	}
+	s := Create(*cfg, c)
 	banner := cfg.Banner
 	if banner == "" {
 		banner = "SMTP Server Ready"
