@@ -39,12 +39,22 @@ func (s Session) HandleConnection() error {
 				return err
 			}
 		}
-		_, err = s.HandleInputLine(line)
+		response, finished, err := s.HandleInputLine(line)
 		if err != nil {
 			if err := s.Println("error handling input line"); err != nil {
 				return err
 			}
 			return err
+		}
+		err = s.SendLine(response)
+		if err != nil {
+			if err := s.Println("io error sending response"); err != nil {
+				return err
+			}
+			return err
+		}
+		if finished {
+			break
 		}
 	}
 	return nil
@@ -74,35 +84,43 @@ func (s Session) ReadLine() (string, error) {
 }
 
 // HandleInputLine accepts a line and handles it
-func (s Session) HandleInputLine(line string) (string, error) {
+func (s Session) HandleInputLine(line string) (string, bool, error) {
 	cmd := strings.Split(line, " ")
 	command := strings.ToUpper(strings.TrimSpace(cmd[0]))
 	switch command {
 	// These commands are valid only in the AUTH state
 	case "USER":
-		return s.processUSER(line)
+		response, err := s.processUSER(line)
+		return response, false, err
 	case "PASS":
-		return s.processPASS(line)
+		response, err := s.processPASS(line)
+		return response, false, err
 
 	// These commands are valid only in the TRANSACTION state
 	case "STAT":
-		return s.processSTAT(line)
+		response, err := s.processSTAT(line)
+		return response, false, err
 	case "LIST":
-		return s.processLIST(line)
+		response, err := s.processLIST(line)
+		return response, false, err
 	case "RETR":
-		return s.processRETR(line)
+		response, err := s.processRETR(line)
+		return response, false, err
 	case "DELE":
-		return s.processDELE(line)
+		response, err := s.processDELE(line)
+		return response, false, err
 
 	// These commands are not vital
 	case "NOOP":
-		return s.processNOOP(line)
+		response, err := s.processNOOP(line)
+		return response, false, err
 
 	// QUIT terminates the session
 	case "QUIT":
-		return s.processQUIT(line)
+		response, err := s.processQUIT(line)
+		return response, true, err
 	default:
-		return "-ERR", errors.New("unrecognized command")
+		return "-ERR", false, errors.New("unrecognized command")
 	}
 }
 

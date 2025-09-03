@@ -17,6 +17,10 @@ type Listener struct {
 	MaxConnections int `toml:"max_connections"`
 	// Timeout in seconds for idle connections
 	IdleTimeout int `toml:"idle_timeout"`
+	// Command is the command to execute for each connection
+	Command string `toml:"command"`
+	// Args are the arguments to pass to the command
+	Args []string `toml:"args"`
 }
 
 // SecureConnection contains TLS/SSL configuration
