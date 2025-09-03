@@ -224,6 +224,10 @@ func handleConnection(conn net.Conn, command string, args []string) {
 		} else {
 			log.Printf("command completed successfully")
 		}
+		// Close the connection immediately when command exits
+		if closeErr := conn.Close(); closeErr != nil && !isConnectionClosed(closeErr) {
+			log.Printf("error closing connection after command exit: %v", closeErr)
+		}
 		// Signal both goroutines to stop
 		close(stopReading)
 		close(stopWriting)
