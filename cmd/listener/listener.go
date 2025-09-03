@@ -34,7 +34,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	var cfg ListenerConfig
+	var cfg smtpd.Config
 	err := config.LoadTOMLConfig(*cfgfile, &cfg)
 	if err != nil {
 		log.Printf("error reading configuration: %v", err)
@@ -56,7 +56,7 @@ func main() {
 	}
 	defer listener.Close()
 
-	log.Printf("listening on %s, running command: %s", address, cfg.Command)
+	log.Printf("listening on %s", address)
 
 	// Handle connections
 	var wg sync.WaitGroup
@@ -91,11 +91,12 @@ func main() {
 	}
 }
 
-func handleConnection(conn net.Conn, cfg ListenerConfig) {
+func handleConnection(conn net.Conn, cfg smtpd.Config) {
 	log.Printf("handling connection from %s", conn.RemoteAddr())
 
-	// Start the command
-	cmd := exec.Command(cfg.Command, cfg.Args...)
+	// Start the smtpd command - we'll hardcode this for now
+	// In the future this could be configurable
+	cmd := exec.Command("./bin/smtpd", "-cfg", "/opt/infodancer/gomail/etc/smtpd.toml")
 	
 	// Get pipes for stdin/stdout
 	stdin, err := cmd.StdinPipe()
@@ -114,7 +115,7 @@ func handleConnection(conn net.Conn, cfg ListenerConfig) {
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
-		log.Printf("error starting command %s: %v", cfg.Command, err)
+		log.Printf("error starting command: %v", err)
 		stdin.Close()
 		stdout.Close()
 		return
@@ -173,9 +174,9 @@ func handleConnection(conn net.Conn, cfg ListenerConfig) {
 	// Wait for the command to finish
 	err = cmd.Wait()
 	if err != nil {
-		log.Printf("command %s exited with error: %v", cfg.Command, err)
+		log.Printf("command exited with error: %v", err)
 	} else {
-		log.Printf("command %s completed successfully", cfg.Command)
+		log.Printf("command completed successfully")
 	}
 
 	log.Printf("connection from %s closed", conn.RemoteAddr())
