@@ -130,10 +130,19 @@ func startListener(cfgfile string) {
 		connCountMutex.Unlock()
 
 		// Output connection info to stdout
-		localAddr := c.LocalAddr().(*net.TCPAddr)
-		remoteAddr := c.RemoteAddr().(*net.TCPAddr)
-		fmt.Printf("Connection accepted: server=%s local_port=%d remote_ip=%s remote_port=%d\n",
-			serverConfig.ServerName, localAddr.Port, remoteAddr.IP.String(), remoteAddr.Port)
+		localAddr := conn.LocalAddr().(*net.TCPAddr)
+		remoteAddr := conn.RemoteAddr().(*net.TCPAddr)
+		maxConns := serverConfig.Listener.MaxConnections
+		if maxConns == 0 {
+			maxConns = -1 // Indicate unlimited
+		}
+		if maxConns > 0 {
+			fmt.Printf("Connection accepted: server=%s local_port=%d remote_ip=%s remote_port=%d [%d/%d]\n",
+				serverConfig.ServerName, localAddr.Port, remoteAddr.IP.String(), remoteAddr.Port, connectionCount, maxConns)
+		} else {
+			fmt.Printf("Connection accepted: server=%s local_port=%d remote_ip=%s remote_port=%d [%d/unlimited]\n",
+				serverConfig.ServerName, localAddr.Port, remoteAddr.IP.String(), remoteAddr.Port, connectionCount)
+		}
 
 		connWg.Add(1)
 
