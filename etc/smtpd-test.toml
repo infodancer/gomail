@@ -15,4 +15,4 @@ require_client_cert = false
 
 banner = "220 test.example.com ESMTP"
 spamc = ""
-maxsize = 10485760
+maxsize = 1048576

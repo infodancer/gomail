@@ -7,6 +7,7 @@ import (
 
 	"github.com/infodancer/gomail/config"
 	"github.com/infodancer/gomail/connect"
+	"github.com/infodancer/gomail/queue"
 
 	"github.com/infodancer/gomail/smtpd"
 )
@@ -28,6 +29,11 @@ func main() {
 	if err != nil {
 		log.Printf("error reading configuration: %v", err)
 		os.Exit(1)
+	}
+
+	// Initialize the mail queue if not set
+	if cfg.MQueue == nil {
+		cfg.MQueue = &queue.Queue{}
 	}
 
 	var c connect.TCPConnection
