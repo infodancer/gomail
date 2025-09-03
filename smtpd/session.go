@@ -412,15 +412,8 @@ func (s *Session) processDATA(line string) (int, string, bool) {
 				return 250, "message accepted for delivery", false
 			}
 		}
-		oldLen := len(s.Data)
-		if err := s.Printf("Appended %d bytes to existing %d bytes in session.Data\n", len(line), oldLen); err != nil {
-			s.Conn.Logger().Print(err)
-		}
 		s.Data += line
 		s.Data += "\n"
-		if err := s.Printf("New session.Data is %d bytes\n", len(s.Data)); err != nil {
-			s.Conn.Logger().Print(err)
-		}
 	}
 	// If we somehow get here without the message being completed, return a temporary failure
 	return 451, "message could not be accepted at this time, try again later", false
