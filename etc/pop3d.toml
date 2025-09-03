@@ -2,6 +2,7 @@
 
 [server]
 server_name = "mail.example.com"
+banner = "POP3 Server Ready"
 
 [server.listener]
 ip_address = "0.0.0.0"
