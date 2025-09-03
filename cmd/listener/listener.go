@@ -12,10 +12,18 @@ import (
 	"sync"
 
 	"github.com/infodancer/gomail/config"
-	"github.com/infodancer/gomail/smtpd"
 )
 
 var Version string
+
+type ListenerConfig struct {
+	// Command is the command to execute for each connection
+	Command string `toml:"command"`
+	// Args are the arguments to pass to the command
+	Args []string `toml:"args"`
+	// Server contains the server configuration
+	Server config.ServerConfig `toml:"server"`
+}
 
 func main() {
 	cfgfile := flag.String("cfg", "/opt/infodancer/gomail/etc/listener.toml", "The configuration file")
@@ -27,15 +35,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	var cfg smtpd.Config
+	var cfg ListenerConfig
 	err := config.LoadTOMLConfig(*cfgfile, &cfg)
 	if err != nil {
 		log.Printf("error reading configuration: %v", err)
 		os.Exit(1)
 	}
 
+	// Validate configuration
+	if cfg.Command == "" {
+		log.Printf("error: command not specified in configuration")
+		os.Exit(1)
+	}
+
 	// Start listening
-	address := fmt.Sprintf("%s:%d", cfg.ServerConfig.Listener.IPAddress, cfg.ServerConfig.Listener.Port)
+	address := fmt.Sprintf("%s:%d", cfg.Server.Listener.IPAddress, cfg.Server.Listener.Port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Printf("error starting listener on %s: %v", address, err)
@@ -43,7 +57,7 @@ func main() {
 	}
 	defer listener.Close()
 
-	log.Printf("listening on %s", address)
+	log.Printf("listening on %s, running command: %s", address, cfg.Command)
 
 	// Handle connections
 	var wg sync.WaitGroup
@@ -57,8 +71,8 @@ func main() {
 		}
 
 		// Check max connections limit
-		if cfg.ServerConfig.Listener.MaxConnections > 0 && connectionCount >= cfg.ServerConfig.Listener.MaxConnections {
-			log.Printf("maximum connections (%d) reached, rejecting connection", cfg.ServerConfig.Listener.MaxConnections)
+		if cfg.Server.Listener.MaxConnections > 0 && connectionCount >= cfg.Server.Listener.MaxConnections {
+			log.Printf("maximum connections (%d) reached, rejecting connection", cfg.Server.Listener.MaxConnections)
 			conn.Close()
 			continue
 		}
@@ -78,12 +92,11 @@ func main() {
 	}
 }
 
-func handleConnection(conn net.Conn, cfg smtpd.Config) {
+func handleConnection(conn net.Conn, cfg ListenerConfig) {
 	log.Printf("handling connection from %s", conn.RemoteAddr())
 
-	// Start the smtpd command - we'll hardcode this for now
-	// In the future this could be configurable
-	cmd := exec.Command("./bin/smtpd", "-cfg", "/opt/infodancer/gomail/etc/smtpd.toml")
+	// Start the configured command
+	cmd := exec.Command(cfg.Command, cfg.Args...)
 	
 	// Get pipes for stdin/stdout
 	stdin, err := cmd.StdinPipe()
