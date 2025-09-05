@@ -3,7 +3,7 @@ server_name = "test.example.com"
 
 [server.listener]
 ip_address = ""
-port = 25
+port = 8025
 max_connections = 10
 idle_timeout = 300
 
