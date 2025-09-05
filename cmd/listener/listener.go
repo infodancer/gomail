@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/infodancer/gomail/config"
 )
@@ -210,13 +211,22 @@ func startListener(cfgfile string) {
 				}
 			}()
 
-			handleConnection(c, command, args)
+			handleConnection(c, command, args, serverConfig.Listener.IdleTimeout)
 		}(conn)
 	}
 }
 
-func handleConnection(conn net.Conn, command string, args []string) {
+func handleConnection(conn net.Conn, command string, args []string, idleTimeoutSeconds int) {
 	log.Printf("handling connection from %s", conn.RemoteAddr())
+
+	// Set up idle timeout if configured
+	var idleTimeout time.Duration
+	if idleTimeoutSeconds > 0 {
+		idleTimeout = time.Duration(idleTimeoutSeconds) * time.Second
+		if err := conn.SetDeadline(time.Now().Add(idleTimeout)); err != nil {
+			log.Printf("error setting initial connection deadline: %v", err)
+		}
+	}
 
 	// Start the configured command
 	cmd := exec.Command(command, args...)
@@ -291,10 +301,22 @@ func handleConnection(conn net.Conn, command string, args []string) {
 			case <-stopReading:
 				return
 			default:
+				// Update deadline before each read if timeout is configured
+				if idleTimeoutSeconds > 0 {
+					if err := conn.SetDeadline(time.Now().Add(idleTimeout)); err != nil {
+						log.Printf("error updating connection deadline: %v", err)
+					}
+				}
+
 				line, err := reader.ReadString('\n')
 				if err != nil {
 					if err != io.EOF && !isConnectionClosed(err) {
-						log.Printf("error reading from connection: %v", err)
+						// Check if this is a timeout error
+						if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+							log.Printf("connection from %s timed out after %d seconds", conn.RemoteAddr(), idleTimeoutSeconds)
+						} else {
+							log.Printf("error reading from connection: %v", err)
+						}
 					}
 					return
 				}
@@ -327,6 +349,14 @@ func handleConnection(conn net.Conn, command string, args []string) {
 					return
 				}
 				line := scanner.Text() + "\n"
+
+				// Update deadline before each write if timeout is configured
+				if idleTimeoutSeconds > 0 {
+					if err := conn.SetDeadline(time.Now().Add(idleTimeout)); err != nil {
+						log.Printf("error updating connection deadline: %v", err)
+					}
+				}
+
 				_, err := conn.Write([]byte(line))
 				if err != nil {
 					if !isConnectionClosed(err) {
