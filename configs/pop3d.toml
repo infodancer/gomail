@@ -1,0 +1,5 @@
+# POP3 Daemon Configuration
+banner = "+OK POP3 server ready"
+
+[server]
+server_name = "pop3.example.com"

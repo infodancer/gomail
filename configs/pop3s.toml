@@ -1,0 +1,19 @@
+# POP3S Server Configuration (Port 995, TLS)
+command = "/usr/local/bin/pop3d"
+args = ["-cfg", "/etc/gomail/pop3d.toml"]
+
+[server]
+server_name = "pop3.example.com"
+
+[server.listener]
+ip_address = ""
+port = 995
+max_connections = 50
+idle_timeout = 600
+
+[server.tls]
+enabled = true
+cert_file = "/etc/ssl/private/server.crt"
+key_file = "/etc/ssl/private/server.key"
+min_tls_version = "1.2"
+require_client_cert = false

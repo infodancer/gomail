@@ -1,0 +1,19 @@
+# SMTP Submission Server Configuration (Port 587, STARTTLS)
+command = "/usr/local/bin/smtpd"
+args = ["-cfg", "/etc/gomail/smtpd-submission.toml"]
+
+[server]
+server_name = "smtp.example.com"
+
+[server.listener]
+ip_address = ""
+port = 587
+max_connections = 100
+idle_timeout = 300
+
+[server.tls]
+enabled = true
+cert_file = "/etc/ssl/private/server.crt"
+key_file = "/etc/ssl/private/server.key"
+min_tls_version = "1.2"
+require_client_cert = false

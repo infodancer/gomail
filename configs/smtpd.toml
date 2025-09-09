@@ -1,0 +1,8 @@
+# SMTP Daemon Configuration
+banner = "220 smtp.example.com ESMTP Postfix"
+spamc = ""
+maxsize = 10485760
+max_recipients = 100
+
+[server]
+server_name = "smtp.example.com"
