@@ -1,0 +1,15 @@
+# SMTP Server Configuration (Port 25, unencrypted)
+command = "/usr/local/bin/smtpd"
+args = ["-cfg", "/etc/gomail/smtpd.toml"]
+
+[server]
+server_name = "smtp.example.com"
+
+[server.listener]
+ip_address = ""
+port = 25
+max_connections = 100
+idle_timeout = 300
+
+[server.tls]
+enabled = false
